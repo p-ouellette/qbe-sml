@@ -1,0 +1,223 @@
+structure A = Absyn
+
+fun curry f x (y, z) = f(x, y, z)
+
+%%
+%name Qbe
+%term
+    EOF
+  | TYPE | ALIGN | EXPORT | DATA | FUNCTION
+  | ADD | SUB | DIV | MUL | NEG | UDIV | REM | UREM | OR | XOR | AND | SAR | SHR
+  | SHL
+  | STORED | STORES | STOREL | STOREW | STOREH | STOREB
+  | LOADD | LOADS | LOADL | LOADW | LOADSW | LOADUW | LOADSH | LOADUH | LOADSB
+  | LOADUB
+  | ALLOC4 | ALLOC8 | ALLOC16
+  | CEQD | CEQL | CEQS | CEQW | CGED | CGES | CGTD | CGTS | CLED | CLES | CLTD 
+  | CLTS | CNED | CNEL | CNES | CNEW | COD  | COS  | CSGEL | CSGEW | CSGTL
+  | CSGTW | CSLEL | CSLEW | CSLTL | CSLTW | CUGEL | CUGEW | CUGTL | CUGTW
+  | CULEL | CULEW | CULTL | CULTW | CUOD | CUOS 
+  | JMP | JNZ | RET
+  | W | L | S | D | B | H | Z
+  | COMMA | LBRACE | RBRACE | LPAREN | RPAREN
+  | EQ
+  | TYP of Atom.atom
+  | GLO of Atom.atom
+  | TMP of Atom.atom
+  | LBL of Atom.atom
+  | INT of int
+  | STRING of string
+
+%pos int
+%pure
+%eop EOF
+%noshift EOF
+
+%value TYP (Atom.atom ":bogus")
+%value GLO (Atom.atom "$bogus")
+%value TMP (Atom.atom "%bogus")
+%value LBL (Atom.atom "@bogus")
+%value INT (1)
+%value STRING ("")
+
+%keyword TYPE ALIGN EXPORT DATA FUNCTION
+
+%nonterm
+    program of A.def list
+  | defs of A.def list
+  | def of  A.def
+  | tylist of (A.ty * int) list
+  | ty_num of A.ty * int
+  | typ of A.ty
+  | linkage of {export: bool}
+  | align_opt of int option
+  | data_fields of A.data_field list
+  | data_field of A.data_field
+  | data_items of A.data_item list
+  | data_item of A.data_item
+  | typ_opt of A.ty option
+  | param_list_opt of (A.ty * Atom.atom) list
+  | param_list of (A.ty * Atom.atom) list
+  | param of A.ty * Atom.atom
+  | stmts of A.stmt list
+  | stmt of A.stmt
+  | value of A.value
+  | instr1 of A.value -> A.instr
+  | instr2 of A.value * A.value -> A.instr
+
+%%
+
+program : defs                          (defs)
+
+defs :                                  ([])
+     | def defs                         (def::defs)
+
+def : TYPE TYP EQ LBRACE tylist RBRACE          (A.Type{name=TYP,align=NONE,types=tylist})
+    | TYPE TYP EQ ALIGN INT LBRACE tylist RBRACE(A.Type{name=TYP,align=SOME INT,types=tylist})
+    | TYPE TYP EQ ALIGN INT LBRACE INT RBRACE   (A.OpaqueType{name=TYP,align=INT1,size=INT2})
+    | linkage DATA GLO EQ align_opt LBRACE data_fields RBRACE
+        (A.Data {name = GLO,
+                 exported = #export linkage,
+                 align = align_opt,
+                 fields = data_fields})
+    | linkage FUNCTION typ_opt GLO LPAREN param_list_opt RPAREN LBRACE stmts RBRACE
+        (A.Function {name = GLO,
+                     exported = #export linkage,
+                     params = param_list_opt,
+                     result = typ_opt,
+                     stmts = stmts})
+
+tylist : ty_num                           ([ty_num])
+       | ty_num COMMA                     ([ty_num])
+       | ty_num COMMA tylist              (ty_num::tylist)
+
+ty_num : typ                              (typ, 1)
+       | typ INT                          (typ, INT)
+
+typ : W                                   (A.Word)
+    | L                                   (A.Long)
+    | S                                   (A.Single)
+    | D                                   (A.Double)
+    | B                                   (A.Byte)
+    | H                                   (A.HalfWord)
+    | TYP                                 (A.Aggregate TYP)
+
+linkage :                                 ({export=false})
+        | EXPORT                          ({export=true})
+
+align_opt :                               (NONE)
+          | ALIGN INT                     (SOME INT)
+
+data_fields : data_field                  ([data_field])
+            | data_field COMMA            ([data_field])
+            | data_field COMMA data_fields(data_field::data_fields)
+
+data_field : typ data_items               (A.DataFieldTy(typ, data_items))
+           | Z INT                        (A.DataFieldZ INT)
+
+data_items : data_item                    ([data_item])
+           | data_item data_items         (data_item::data_items)
+
+data_item : GLO                           (A.DataSymbol GLO)
+          | STRING                        (A.DataStr STRING)
+          | INT                           (A.DataConst INT)
+
+typ_opt :                                 (NONE)
+        | typ                             (SOME typ)
+
+param_list_opt :                          ([])
+               | param_list               (param_list)
+
+param_list : param                        ([param])
+           | param COMMA                  ([param])
+           | param COMMA param_list       (param::param_list)
+
+param : typ TMP                           ((typ, TMP))
+
+stmts : stmt                              ([stmt])
+      | stmt stmts                        (stmt::stmts)
+
+stmt : LBL                                (A.Label LBL)
+     | TMP EQ typ instr1 value            (A.Assign(TMP, typ, instr1 value))
+     | TMP EQ typ instr2 value COMMA value(A.Assign(TMP, typ, instr2(value1, value2)))
+     | instr1 value                       (A.Instr(instr1 value))
+     | instr2 value COMMA value           (A.Instr(instr2(value1, value2)))
+     | JMP LBL                            (A.Instr(A.Jmp LBL))
+     | JNZ value COMMA LBL COMMA LBL      (A.Instr(A.Jnz(value, LBL1, LBL2)))
+     | RET                                (A.Instr(A.Ret NONE))
+     | RET value                          (A.Instr(A.Ret(SOME value)))
+
+value : TMP                               (A.Temp TMP)
+      | GLO                               (A.Global GLO)
+      | INT                               (A.Const INT)
+
+instr1 : NEG                              (A.Neg)
+       | LOADD                            (A.Loadd)
+       | LOADS                            (A.Loads)
+       | LOADL                            (A.Loadl)
+       | LOADW                            (A.Loadw)
+       | LOADSW                           (A.Loadsw)
+       | LOADUW                           (A.Loaduw)
+       | LOADSH                           (A.Loadsh)
+       | LOADUH                           (A.Loaduh)
+       | LOADSB                           (A.Loadsb)
+       | LOADUB                           (A.Loadub)
+       | ALLOC4                           (A.Alloc4)
+       | ALLOC8                           (A.Alloc8)
+       | ALLOC16                          (A.Alloc16)
+
+instr2 : ADD                              (A.Add)
+       | SUB                              (A.Sub)
+       | DIV                              (A.Div)
+       | MUL                              (A.Mul)
+       | UDIV                             (A.Udiv)
+       | REM                              (A.Rem)
+       | UREM                             (A.Urem)
+       | OR                               (A.Or)
+       | XOR                              (A.Xor)
+       | AND                              (A.And)
+       | SAR                              (A.Sar)
+       | SHR                              (A.Shr)
+       | SHL                              (A.Shl)
+       | STORED                           (A.Stored)
+       | STORES                           (A.Stores)
+       | STOREL                           (A.Storel)
+       | STOREW                           (A.Storew)
+       | STOREH                           (A.Storeh)
+       | STOREB                           (A.Storeb)
+       | CEQD                             (curry A.Ceq A.Double)
+       | CEQL                             (curry A.Ceq A.Long)
+       | CEQS                             (curry A.Ceq A.Single)
+       | CEQW                             (curry A.Ceq A.Word)
+       | CGED                             (curry A.Cge A.Double)
+       | CGES                             (curry A.Cge A.Single)
+       | CGTD                             (curry A.Cgt A.Double)
+       | CGTS                             (curry A.Cgt A.Single)
+       | CLED                             (curry A.Cle A.Double)
+       | CLES                             (curry A.Cle A.Single)
+       | CLTD                             (curry A.Clt A.Double)
+       | CLTS                             (curry A.Clt A.Single)
+       | CNED                             (curry A.Cne A.Double)
+       | CNEL                             (curry A.Cne A.Long)
+       | CNES                             (curry A.Cne A.Single)
+       | CNEW                             (curry A.Cne A.Word)
+       | COD                              (curry A.Co A.Double)
+       | COS                              (curry A.Co A.Single)
+       | CSGEL                            (curry A.Csge A.Long)
+       | CSGEW                            (curry A.Csge A.Word)
+       | CSGTL                            (curry A.Csgt A.Long)
+       | CSGTW                            (curry A.Csgt A.Word)
+       | CSLEL                            (curry A.Csle A.Long)
+       | CSLEW                            (curry A.Csle A.Word)
+       | CSLTL                            (curry A.Cslt A.Long)
+       | CSLTW                            (curry A.Cslt A.Word)
+       | CUGEL                            (curry A.Cuge A.Long)
+       | CUGEW                            (curry A.Cuge A.Word)
+       | CUGTL                            (curry A.Cugt A.Long)
+       | CUGTW                            (curry A.Cugt A.Word)
+       | CULEL                            (curry A.Cule A.Long)
+       | CULEW                            (curry A.Cule A.Word)
+       | CULTL                            (curry A.Cult A.Long)
+       | CULTW                            (curry A.Cult A.Word)
+       | CUOD                             (curry A.Cuo A.Double)
+       | CUOS                             (curry A.Cuo A.Single)
