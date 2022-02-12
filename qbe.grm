@@ -87,8 +87,8 @@ program : defs                          (defs)
 defs :                                  ([])
      | def defs                         (def::defs)
 
-def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,types=tylist})
-    | TYPE TYP EQ ALIGN INT LBRACE tylist RBRACE(T.Type{name=TYP,align=SOME INT,types=tylist})
+def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,items=tylist})
+    | TYPE TYP EQ ALIGN INT LBRACE tylist RBRACE(T.Type{name=TYP,align=SOME INT,items=tylist})
     | TYPE TYP EQ ALIGN INT LBRACE INT RBRACE   (T.OpaqueType{name=TYP,align=INT1,size=INT2})
     | linkage DATA GLO EQ align_opt LBRACE data_fields RBRACE
         (T.Data {name = GLO,

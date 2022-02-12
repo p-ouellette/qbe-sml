@@ -1,25 +1,23 @@
 structure QbeTypes =
 struct
 
-type atom = Atom.atom
-
 datatype ty = Word
             | Long
             | Single
             | Double
             | Byte
             | HalfWord
-            | Aggregate of atom
+            | Aggregate of Atom.atom
 
-datatype data_item = DataSymbol of atom
+datatype data_item = DataSymbol of Atom.atom
                    | DataStr of string
                    | DataConst of int
 
 datatype data_field = DataFieldTy of ty * data_item list
                     | DataFieldZ of int
 
-datatype value = Temp of atom
-               | Global of atom
+datatype value = Temp of Atom.atom
+               | Global of Atom.atom
                | Const of int
 
 datatype instr = Add of value * value
@@ -89,31 +87,41 @@ datatype instr = Add of value * value
                | Truncd of value
                | Cast of value
                | Copy of value
-               | Call of atom * (ty * value) list
+               | Call of Atom.atom * (ty * value) list
                | Vastart of value
                | Vaarg of value
-               | Phi of (atom * value) list
-               | Jmp of atom
-               | Jnz of value * atom * atom
+               | Phi of (Atom.atom * value) list
+               | Jmp of Atom.atom
+               | Jnz of value * Atom.atom * Atom.atom
                | Ret of value option
                | Retw of value option
                | Nop
 
-datatype stmt = Label of atom
-              | Assign of atom * ty * instr
+datatype stmt = Label of Atom.atom
+              | Assign of Atom.atom * ty * instr
               | Instr of instr
 
-datatype def = Type of {name: atom, align: int option, types: (ty * int) list}
-             | OpaqueType of {name: atom, align: int, size: int}
-             | Data of {name: atom,
-                        exported: bool,
-                        align: int option,
-                        fields: data_field list}
-             | Function of {name: atom,
-                            exported: bool,
-                            params: (ty * atom) list,
-                            variadic: bool,
-                            result: ty option,
-                            stmts: stmt list}
+type typedef = {name: Atom.atom,
+                align: int option,
+                items: (ty * int) list}
+
+type darktypedef = {name: Atom.atom, align: int, size: int}
+
+type datadef = {name: Atom.atom,
+                exported: bool,
+                align: int option,
+                fields: data_field list}
+
+type func = {name: Atom.atom,
+             exported: bool,
+             params: (ty * Atom.atom) list,
+             variadic: bool,
+             result: ty option,
+             stmts: stmt list}
+
+datatype def = Type of typedef
+             | OpaqueType of darktypedef
+             | Data of datadef
+             | Function of func
 
 end

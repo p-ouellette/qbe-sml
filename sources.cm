@@ -3,7 +3,10 @@ Group is
 $/basis.cm
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
-absyn.sml
+datatypes.sml
+parse.sig
+parse.sml
+print.sig
+print.sml
 qbe.grm
 qbe.lex
-qbe.sml
