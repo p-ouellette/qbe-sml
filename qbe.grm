@@ -47,9 +47,10 @@ fun curry f x (y, z) = f(x, y, z)
 %value STR ("")
 
 %keyword TYPE ALIGN EXPORT DATA FUNCTION
+%prefer LBL
 
 %nonterm
-    program of T.def list
+    module of T.module
   | defs of T.def list
   | def of  T.def
   | tylist of (T.ty * int) list
@@ -65,8 +66,12 @@ fun curry f x (y, z) = f(x, y, z)
   | params of {params: (T.ty * Atom.atom) list, variadic: bool}
   | param_list of {params: (T.ty * Atom.atom) list, variadic: bool}
   | param of T.ty * Atom.atom
+  | blocks of T.block list
+  | block of T.block
+  | stmts_opt of T.stmt list
   | stmts of T.stmt list
   | stmt of T.stmt
+  | jump of T.instr
   | value of T.value
   | instr1v of T.instr
   | instr2v of T.instr
@@ -82,7 +87,7 @@ fun curry f x (y, z) = f(x, y, z)
 
 %%
 
-program : defs                          (defs)
+module : defs                           (defs)
 
 defs :                                  ([])
      | def defs                         (def::defs)
@@ -95,13 +100,13 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,item
                  exported = #export linkage,
                  align = align_opt,
                  fields = data_fields})
-    | linkage FUNCTION typ_opt GLO LPAREN params RPAREN LBRACE stmts RBRACE
+    | linkage FUNCTION typ_opt GLO LPAREN params RPAREN LBRACE blocks RBRACE
         (T.Function {name = GLO,
                      exported = #export linkage,
                      params = #params params,
                      variadic = #variadic params,
                      result = typ_opt,
-                     stmts = stmts})
+                     blocks = blocks})
 
 tylist : ty_num                           ([ty_num])
        | ty_num COMMA                     ([ty_num])
@@ -152,22 +157,31 @@ param_list : param                        ({params=[param], variadic=false})
 
 param : typ TMP                           ((typ, TMP))
 
+blocks : block                            ([block])
+       | block blocks                     (block::blocks)
+
+block : LBL stmts_opt                     ({label=LBL, stmts=stmts_opt, jump=NONE})
+      | LBL stmts_opt jump                ({label=LBL, stmts=stmts_opt, jump=SOME jump})
+
+stmts_opt :                               ([])
+          | stmts                         (stmts)
+
 stmts : stmt                              ([stmt])
       | stmt stmts                        (stmt::stmts)
 
-stmt : LBL                                (T.Label LBL)
-     | instr1v                            (T.Instr instr1v)
+stmt : instr1v                            (T.Instr instr1v)
      | instr2v                            (T.Instr instr2v)
      | call                               (T.Instr call)
      | TMP EQ typ instr1v                 (T.Assign(TMP, typ, instr1v))
      | TMP EQ typ instr2v                 (T.Assign(TMP, typ, instr2v))
      | TMP EQ typ call                    (T.Assign(TMP, typ, call))
      | TMP EQ typ PHI phiargs             (T.Instr(T.Phi phiargs))
-     | JMP LBL                            (T.Instr(T.Jmp LBL))
-     | JNZ value COMMA LBL COMMA LBL      (T.Instr(T.Jnz(value, LBL1, LBL2)))
-     | ret                                (T.Instr(ret NONE))
-     | ret value                          (T.Instr(ret(SOME value)))
      | NOP                                (T.Instr T.Nop)
+
+jump : JMP LBL                            (T.Jmp LBL)
+     | JNZ value COMMA LBL COMMA LBL      (T.Jnz(value, LBL1, LBL2))
+     | ret                                (ret NONE)
+     | ret value                          (ret(SOME value))
 
 value : TMP                               (T.Temp TMP)
       | GLO                               (T.Global GLO)

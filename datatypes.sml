@@ -97,8 +97,7 @@ datatype instr = Add of value * value
                | Retw of value option
                | Nop
 
-datatype stmt = Label of Atom.atom
-              | Assign of Atom.atom * ty * instr
+datatype stmt = Assign of Atom.atom * ty * instr
               | Instr of instr
 
 type typedef = {name: Atom.atom,
@@ -112,16 +111,22 @@ type datadef = {name: Atom.atom,
                 align: int option,
                 fields: data_field list}
 
+type block = {label: Atom.atom,
+              stmts: stmt list,
+              jump: instr option}
+
 type func = {name: Atom.atom,
              exported: bool,
              params: (ty * Atom.atom) list,
              variadic: bool,
              result: ty option,
-             stmts: stmt list}
+             blocks: block list}
 
 datatype def = Type of typedef
              | OpaqueType of darktypedef
              | Data of datadef
              | Function of func
+
+type module = def list
 
 end
