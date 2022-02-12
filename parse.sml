@@ -1,4 +1,4 @@
-structure Qbe =
+structure QbeParse : QBE_PARSE =
 struct
 
   structure QbeLrVals = QbeLrValsFun(structure Token = LrParser.Token)
@@ -14,9 +14,9 @@ struct
               TextIO.output(TextIO.stdErr,
                 fname ^ ":" ^ Int.toString line ^ ": " ^ msg ^ "\n")
         val _ = QbeLex.UserDeclarations.lineNum := 1
-        val (absyn, _) = QbeParser.parse(30, stream, error, ())
+        val (defs, _) = QbeParser.parse(30, stream, error, ())
          in TextIO.closeIn file;
-            absyn
+            defs
         end
 
 end

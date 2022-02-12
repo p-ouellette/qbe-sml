@@ -1,4 +1,4 @@
-structure Absyn =
+structure QbeTypes =
 struct
 
 type atom = Atom.atom
@@ -96,6 +96,8 @@ datatype instr = Add of value * value
                | Jmp of atom
                | Jnz of value * atom * atom
                | Ret of value option
+               | Retw of value option
+               | Nop
 
 datatype stmt = Label of atom
               | Assign of atom * ty * instr
