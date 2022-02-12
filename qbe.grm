@@ -17,16 +17,21 @@ fun curry f x (y, z) = f(x, y, z)
   | CLTS | CNED | CNEL | CNES | CNEW | COD  | COS  | CSGEL | CSGEW | CSGTL
   | CSGTW | CSLEL | CSLEW | CSLTL | CSLTW | CUGEL | CUGEW | CUGTL | CUGTW
   | CULEL | CULEW | CULTL | CULTW | CUOD | CUOS 
+  | DTOSI | DTOUI | EXTS  | EXTSB | EXTSH | EXTSW | EXTUB | EXTUH | EXTUW
+  | SLTOF | ULTOF | STOSI | STOUI | SWTOF | UWTOF | TRUNCD
+  | CAST | COPY
+  | CALL
+  | VASTART | VAARG
+  | PHI
   | JMP | JNZ | RET
   | W | L | S | D | B | H | Z
-  | COMMA | LBRACE | RBRACE | LPAREN | RPAREN
-  | EQ
+  | COMMA | LBRACE | RBRACE | LPAREN | RPAREN | EQ | DOTS
   | TYP of Atom.atom
   | GLO of Atom.atom
   | TMP of Atom.atom
   | LBL of Atom.atom
   | INT of int
-  | STRING of string
+  | STR of string
 
 %pos int
 %pure
@@ -38,7 +43,7 @@ fun curry f x (y, z) = f(x, y, z)
 %value TMP (Atom.atom "%bogus")
 %value LBL (Atom.atom "@bogus")
 %value INT (1)
-%value STRING ("")
+%value STR ("")
 
 %keyword TYPE ALIGN EXPORT DATA FUNCTION
 
@@ -56,12 +61,20 @@ fun curry f x (y, z) = f(x, y, z)
   | data_items of A.data_item list
   | data_item of A.data_item
   | typ_opt of A.ty option
-  | param_list_opt of (A.ty * Atom.atom) list
-  | param_list of (A.ty * Atom.atom) list
+  | params of {params: (A.ty * Atom.atom) list, variadic: bool}
+  | param_list of {params: (A.ty * Atom.atom) list, variadic: bool}
   | param of A.ty * Atom.atom
   | stmts of A.stmt list
   | stmt of A.stmt
   | value of A.value
+  | instr1v of A.instr
+  | instr2v of A.instr
+  | call of A.instr
+  | args of (A.ty * A.value) list
+  | arg_list of (A.ty * A.value) list
+  | arg of A.ty * A.value
+  | phiargs of (Atom.atom * A.value) list
+  | phiarg of Atom.atom * A.value
   | instr1 of A.value -> A.instr
   | instr2 of A.value * A.value -> A.instr
 
@@ -80,10 +93,11 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (A.Type{name=TYP,align=NONE,type
                  exported = #export linkage,
                  align = align_opt,
                  fields = data_fields})
-    | linkage FUNCTION typ_opt GLO LPAREN param_list_opt RPAREN LBRACE stmts RBRACE
+    | linkage FUNCTION typ_opt GLO LPAREN params RPAREN LBRACE stmts RBRACE
         (A.Function {name = GLO,
                      exported = #export linkage,
-                     params = param_list_opt,
+                     params = #params params,
+                     variadic = #variadic params,
                      result = typ_opt,
                      stmts = stmts})
 
@@ -119,18 +133,20 @@ data_items : data_item                    ([data_item])
            | data_item data_items         (data_item::data_items)
 
 data_item : GLO                           (A.DataSymbol GLO)
-          | STRING                        (A.DataStr STRING)
+          | STR                           (A.DataStr STR)
           | INT                           (A.DataConst INT)
 
 typ_opt :                                 (NONE)
         | typ                             (SOME typ)
 
-param_list_opt :                          ([])
-               | param_list               (param_list)
+params :                                  ({params=[], variadic=false})
+       | param_list                       (param_list)
 
-param_list : param                        ([param])
-           | param COMMA                  ([param])
-           | param COMMA param_list       (param::param_list)
+param_list : param                        ({params=[param], variadic=false})
+           | param COMMA                  ({params=[param], variadic=false})
+           | param COMMA DOTS             ({params=[param], variadic=true})
+           | param COMMA param_list       ({params = param::(#params param_list),
+                                            variadic = #variadic param_list})
 
 param : typ TMP                           ((typ, TMP))
 
@@ -138,10 +154,13 @@ stmts : stmt                              ([stmt])
       | stmt stmts                        (stmt::stmts)
 
 stmt : LBL                                (A.Label LBL)
-     | TMP EQ typ instr1 value            (A.Assign(TMP, typ, instr1 value))
-     | TMP EQ typ instr2 value COMMA value(A.Assign(TMP, typ, instr2(value1, value2)))
-     | instr1 value                       (A.Instr(instr1 value))
-     | instr2 value COMMA value           (A.Instr(instr2(value1, value2)))
+     | instr1v                            (A.Instr instr1v)
+     | instr2v                            (A.Instr instr2v)
+     | call                               (A.Instr call)
+     | TMP EQ typ instr1v                 (A.Assign(TMP, typ, instr1v))
+     | TMP EQ typ instr2v                 (A.Assign(TMP, typ, instr2v))
+     | TMP EQ typ call                    (A.Assign(TMP, typ, call))
+     | TMP EQ typ PHI phiargs             (A.Instr(A.Phi phiargs))
      | JMP LBL                            (A.Instr(A.Jmp LBL))
      | JNZ value COMMA LBL COMMA LBL      (A.Instr(A.Jnz(value, LBL1, LBL2)))
      | RET                                (A.Instr(A.Ret NONE))
@@ -150,6 +169,26 @@ stmt : LBL                                (A.Label LBL)
 value : TMP                               (A.Temp TMP)
       | GLO                               (A.Global GLO)
       | INT                               (A.Const INT)
+
+instr1v : instr1 value                    (instr1 value)
+
+instr2v : instr2 value COMMA value        (instr2(value1, value2))
+
+call : CALL GLO LPAREN args RPAREN        (A.Call(GLO, args))
+
+args :                                    ([])
+     | arg_list                           (arg_list)
+
+arg_list : arg                            ([arg])
+         | arg COMMA                      ([arg])
+         | arg COMMA arg_list             (arg::arg_list)
+
+arg : typ value                           ((typ, value))
+
+phiargs : phiarg                          ([phiarg])
+        | phiarg COMMA phiargs            (phiarg::phiargs)
+
+phiarg : LBL value                        ((LBL, value))
 
 instr1 : NEG                              (A.Neg)
        | LOADD                            (A.Loadd)
@@ -165,6 +204,26 @@ instr1 : NEG                              (A.Neg)
        | ALLOC4                           (A.Alloc4)
        | ALLOC8                           (A.Alloc8)
        | ALLOC16                          (A.Alloc16)
+       | DTOSI                            (A.Dtosi)
+       | DTOUI                            (A.Dtoui)
+       | EXTS                             (A.Exts)
+       | EXTSB                            (A.Extsb)
+       | EXTSH                            (A.Extsh)
+       | EXTSW                            (A.Extsw)
+       | EXTUB                            (A.Extub)
+       | EXTUH                            (A.Extuh)
+       | EXTUW                            (A.Extuw)
+       | SLTOF                            (A.Sltof)
+       | ULTOF                            (A.Ultof)
+       | STOSI                            (A.Stosi)
+       | STOUI                            (A.Stoui)
+       | SWTOF                            (A.Swtof)
+       | UWTOF                            (A.Uwtof)
+       | TRUNCD                           (A.Truncd)
+       | CAST                             (A.Cast)
+       | COPY                             (A.Copy)
+       | VASTART                          (A.Vastart)
+       | VAARG                            (A.Vaarg)
 
 instr2 : ADD                              (A.Add)
        | SUB                              (A.Sub)

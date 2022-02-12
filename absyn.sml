@@ -71,6 +71,28 @@ datatype instr = Add of value * value
                | Cgt of ty * value * value
                | Co of ty * value * value
                | Cuo of ty * value * value
+               | Dtosi of value
+               | Dtoui of value
+               | Exts of value
+               | Extsb of value
+               | Extsh of value
+               | Extsw of value
+               | Extub of value
+               | Extuh of value
+               | Extuw of value
+               | Sltof of value
+               | Ultof of value
+               | Stosi of value
+               | Stoui of value
+               | Swtof of value
+               | Uwtof of value
+               | Truncd of value
+               | Cast of value
+               | Copy of value
+               | Call of atom * (ty * value) list
+               | Vastart of value
+               | Vaarg of value
+               | Phi of (atom * value) list
                | Jmp of atom
                | Jnz of value * atom * atom
                | Ret of value option
@@ -88,6 +110,7 @@ datatype def = Type of {name: atom, align: int option, types: (ty * int) list}
              | Function of {name: atom,
                             exported: bool,
                             params: (ty * atom) list,
+                            variadic: bool,
                             result: ty option,
                             stmts: stmt list}
 

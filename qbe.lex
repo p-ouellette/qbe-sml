@@ -4,20 +4,21 @@ type svalue = T.svalue
 type ('a,'b) token = ('a,'b) T.token
 type lexresult = (svalue,pos) token
 
-val lineNum = ref 1
+val lineNum = ref 0
 fun eof () = T.EOF(!lineNum,!lineNum)
 
 fun ident s = Atom.atom(String.extract(s, 1, NONE))
 
 fun makeString s = let
       val s = String.substring(s, 1, String.size s - 2)
-       in T.STRING(valOf(String.fromString s),!lineNum,!lineNum)
+       in T.STR(valOf(String.fromString s),!lineNum,!lineNum)
       end
 
 structure KW = KeywordFn(struct
   type token = lexresult
   type pos = int
-  fun ident _ = raise Fail "bad token"
+  fun ident (id, p1, _) =
+        raise Fail("bad token '" ^ Atom.toString id ^ "' at line " ^ Int.toString p1)
   val keywords =
     [("type", T.TYPE),
      ("align", T.ALIGN),
@@ -93,6 +94,28 @@ structure KW = KeywordFn(struct
      ("cultw", T.CULTW),
      ("cuod", T.CUOD),
      ("cuos", T.CUOS),
+     ("dtosi", T.DTOSI),
+     ("dtoui", T.DTOUI),
+     ("exts", T.EXTS),
+     ("extsb", T.EXTSB),
+     ("extsh", T.EXTSH),
+     ("extsw", T.EXTSW),
+     ("extub", T.EXTUB),
+     ("extuh", T.EXTUH),
+     ("extuw", T.EXTUW),
+     ("sltof", T.SLTOF),
+     ("ultof", T.ULTOF),
+     ("stosi", T.STOSI),
+     ("stoui", T.STOUI),
+     ("swtof", T.SWTOF),
+     ("uwtof", T.UWTOF),
+     ("truncd", T.TRUNCD),
+     ("cast", T.CAST),
+     ("copy", T.COPY),
+     ("call", T.CALL),
+     ("vastart", T.VASTART),
+     ("vaarg", T.VAARG),
+     ("phi", T.PHI),
      ("jmp", T.JMP),
      ("jnz", T.JNZ),
      ("ret", T.RET),
@@ -118,16 +141,19 @@ integer={optsign}{digit}+;
 %%
 {ws}+      => (continue());
 \n         => (lineNum := !lineNum + 1; continue());
-{alpha}+   => (KW.keyword(yytext,!lineNum,!lineNum));
+{id}+      => (KW.keyword(yytext,!lineNum,!lineNum));
 ":"{id}    => (T.TYP(ident yytext,!lineNum,!lineNum));
 "$"{id}    => (T.GLO(ident yytext,!lineNum,!lineNum));
 "%"{id}    => (T.TMP(ident yytext,!lineNum,!lineNum));
 "@"{id}    => (T.LBL(ident yytext,!lineNum,!lineNum));
 {integer}  => (T.INT(valOf(Int.fromString yytext),!lineNum,!lineNum));
 \"[^\"]*\" => (makeString yytext);
+#.*        => (continue());
 ","        => (T.COMMA(!lineNum,!lineNum));
 "{"        => (T.LBRACE(!lineNum,!lineNum));
 "}"        => (T.RBRACE(!lineNum,!lineNum));
 "("        => (T.LPAREN(!lineNum,!lineNum));
 ")"        => (T.RPAREN(!lineNum,!lineNum));
 "="        => (T.EQ(!lineNum,!lineNum));
+"..."      => (T.DOTS(!lineNum,!lineNum));
+.          => (raise Fail("bad character at line " ^ Int.toString(!lineNum)));
