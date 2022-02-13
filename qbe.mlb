@@ -1,0 +1,31 @@
+local
+
+  $(SML_LIB)/basis/basis.mlb
+  $(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
+  $(SML_LIB)/mlyacc-lib/mlyacc-lib.mlb
+
+  datatypes.sig
+  datatypes.sml
+  gen.sig
+  gen.sml
+  print.sig
+  print.sml
+  qbe.grm.sig
+  qbe.grm.sml
+  qbe.lex.sml
+  parse.sig
+  parse.sml
+
+in
+
+  signature QBE_TYPES
+  signature QBE_GEN
+  signature QBE_PARSE
+  signature QBE_PRINT
+
+  structure QbeTypes
+  structure QbeGen
+  structure QbeParse
+  structure QbePrint
+
+end

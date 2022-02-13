@@ -3,3 +3,4 @@ qbe.grm.desc
 qbe.grm.sig
 qbe.grm.sml
 qbe.lex.sml
+examples/hello
