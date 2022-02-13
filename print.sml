@@ -2,6 +2,7 @@ structure QbePrint : QBE_PRINT =
 struct
 
   structure T = QbeTypes
+  structure G = QbeGen
 
   fun say out s = TextIO.output(out, s)
 
@@ -13,20 +14,20 @@ struct
   val saytmp = sayid "%"
   val saylbl = sayid "@"
 
-  fun tystr T.Word = "w"
-    | tystr T.Long = "l"
-    | tystr T.Single = "s"
-    | tystr T.Double = "d"
-    | tystr T.Byte = "b"
-    | tystr T.HalfWord = "h"
-    | tystr (T.Aggregate _) = raise Fail "impossible"
+  fun tystr T.W = "w"
+    | tystr T.L = "l"
+    | tystr T.S = "s"
+    | tystr T.D = "d"
+    | tystr T.B = "b"
+    | tystr T.H = "h"
+    | tystr (T.Aggr _) = raise Fail "impossible"
 
-  fun sayty out (T.Aggregate name) = saytyp out name
+  fun sayty out (T.Aggr name) = saytyp out name
     | sayty out ty = say out (tystr ty)
 
-  fun sayval out (T.Temp name) = saytmp out name
-    | sayval out (T.Global name) = sayglo out name
-    | sayval out (T.Const i) = sayint out i
+  fun sayval out (T.Tmp name) = saytmp out name
+    | sayval out (T.Glo name) = sayglo out name
+    | sayval out (T.Con i) = sayint out i
 
   fun sayret out s NONE = say out s
     | sayret out s (SOME v) = (say out s; say out " "; sayval out v)
@@ -179,13 +180,13 @@ struct
 
   fun printDataDef (out, {name, exported, align, fields}) = let
         val say = say out
-        fun sayitem (T.DataSymbol name) = (say " "; sayglo out name)
+        fun sayitem (T.DataSym name) = (say " "; sayglo out name)
           | sayitem (T.DataStr s) = (say " \""; say(String.toString s); say "\"")
-          | sayitem (T.DataConst i) = (say " "; sayint out i)
+          | sayitem (T.DataCon i) = (say " "; sayint out i)
 
-        fun sayfield (T.DataFieldTy(ty, items)) =
+        fun sayfield (T.DataTy(ty, items)) =
               (sayty out ty; app sayitem items; say ", ")
-          | sayfield (T.DataFieldZ i) = (say "z "; sayint out i; say ", ")
+          | sayfield (T.DataZ i) = (say "z "; sayint out i; say ", ")
         in
           if exported then say "export " else ();
           say "data "; sayglo out name; say " =";
@@ -210,8 +211,9 @@ struct
           case result
             of NONE => ()
              | SOME ty => (sayty out ty; say " ");
-          sayglo out name; say "("; app sayparam params; say ") {\n";
-          app sayblk blocks; say "}\n"
+          sayglo out name; say "("; app sayparam params;
+          if variadic then say "..." else ();
+          say ") {\n"; app sayblk blocks; say "}\n"
         end
 
   fun printDef (out, T.Type t) = printTypeDef(out, t)
@@ -219,6 +221,6 @@ struct
     | printDef (out, T.Data d) = printDataDef(out, d)
     | printDef (out, T.Function f) = printFn(out, f)
 
-  fun printModule (out, m) = app (fn d => printDef(out, d)) m
+  fun printModule (out, m) = app (fn d => printDef(out, d)) (G.defs m)
 
 end

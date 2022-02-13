@@ -1,24 +1,17 @@
 signature QBE_TYPES =
 sig
 
-datatype ty = Word
-            | Long
-            | Single
-            | Double
-            | Byte
-            | HalfWord
-            | Aggregate of Atom.atom
+datatype ty = W
+            | L
+            | S
+            | D
+            | B
+            | H
+            | Aggr of Atom.atom
 
-datatype data_item = DataSymbol of Atom.atom
-                   | DataStr of string
-                   | DataConst of int
-
-datatype data_field = DataFieldTy of ty * data_item list
-                    | DataFieldZ of int
-
-datatype value = Temp of Atom.atom
-               | Global of Atom.atom
-               | Const of int
+datatype value = Tmp of Atom.atom
+               | Glo of Atom.atom
+               | Con of int
 
 datatype instr = Add of value * value
                | Sub of value * value
@@ -123,10 +116,17 @@ type typedef = {name: Atom.atom,
 
 type darktypedef = {name: Atom.atom, align: int, size: int}
 
+datatype dataitem = DataSym of Atom.atom
+                  | DataStr of string
+                  | DataCon of int
+
+datatype datafield = DataTy of ty * dataitem list
+                   | DataZ of int
+
 type datadef = {name: Atom.atom,
                 exported: bool,
                 align: int option,
-                fields: data_field list}
+                fields: datafield list}
 
 datatype stmt = Assign of Atom.atom * ty * instr
               | Volatile of instr
@@ -146,7 +146,5 @@ datatype def = Type of typedef
              | OpaqueType of darktypedef
              | Data of datadef
              | Function of func
-
-type module = def list
 
 end

@@ -14,9 +14,9 @@ struct
               TextIO.output(TextIO.stdErr,
                 fname ^ ":" ^ Int.toString line ^ ": " ^ msg ^ "\n")
         val _ = QbeLex.UserDeclarations.lineNum := 1
-        val (defs, _) = QbeParser.parse(30, stream, error, ())
+        val (module, _) = QbeParser.parse(30, stream, error, ())
          in TextIO.closeIn file;
-            defs
+            module
         end
 
 end

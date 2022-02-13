@@ -1,0 +1,27 @@
+Library
+  
+  signature QBE_TYPES
+  signature QBE_GEN
+  signature QBE_PARSE
+  signature QBE_PRINT
+
+  structure QbeTypes
+  structure QbeGen
+  structure QbeParse
+  structure QbePrint
+
+is
+
+  $/basis.cm
+  $/smlnj-lib.cm
+  $/ml-yacc-lib.cm
+  datatypes.sig
+  datatypes.sml
+  gen.sig
+  gen.sml
+  parse.sig
+  parse.sml
+  print.sig
+  print.sml
+  qbe.grm
+  qbe.lex
