@@ -6,3 +6,6 @@ qbe.lex.sml: qbe.lex
 
 qbe.grm.sig qbe.grm.sml: qbe.grm
 	mlyacc qbe.grm
+
+clean:
+	rm -rf qbe.lex.sml qbe.grm.sig qbe.grm.sml qbe.grm.desc examples/hello

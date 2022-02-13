@@ -157,7 +157,7 @@ struct
     | saystmt out (T.Volatile instr) =
         (say out "\t"; sayinstr out instr; say out "\n")
 
-  fun printTypeDef (out, {name, align, items}) = let
+  fun printType (out, {name, align, items}) = let
         val say = say out
         fun sayitem (ty, n) =
               (sayty out ty;
@@ -171,14 +171,14 @@ struct
           say " { "; app sayitem items; say "}\n"
         end
 
-  fun printDarkTypeDef (out, {name, align, size}) = let
+  fun printOpaqueType (out, {name, align, size}) = let
         val say = say out
         in
           say "type "; saytyp out name; say " = align "; sayint out align;
           say " { "; sayint out size; say " }\n"
         end
 
-  fun printDataDef (out, {name, exported, align, fields}) = let
+  fun printData (out, {name, exported, align, fields}) = let
         val say = say out
         fun sayitem (T.DataSym name) = (say " "; sayglo out name)
           | sayitem (T.DataStr s) = (say " \""; say(String.toString s); say "\"")
@@ -216,9 +216,9 @@ struct
           say ") {\n"; app sayblk blocks; say "}\n"
         end
 
-  fun printDef (out, T.Type t) = printTypeDef(out, t)
-    | printDef (out, T.OpaqueType t) = printDarkTypeDef(out, t)
-    | printDef (out, T.Data d) = printDataDef(out, d)
+  fun printDef (out, T.Type t) = printType(out, t)
+    | printDef (out, T.OpaqueType t) = printOpaqueType(out, t)
+    | printDef (out, T.Data d) = printData(out, d)
     | printDef (out, T.Function f) = printFn(out, f)
 
   fun printModule (out, m) = app (fn d => printDef(out, d)) (G.defs m)
