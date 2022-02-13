@@ -6,12 +6,12 @@ struct
   fun say out s = TextIO.output(out, s)
 
   fun sayint out i = say out (Int.toString i)
-  fun sayid s out a = (say out s; say out (Atom.toString a))
+  fun sayid s out id = (say out s; say out (Atom.toString id))
 
-  val sayAggTy = sayid ":"
-  val sayGlobal = sayid "$"
-  val sayTemp = sayid "%"
-  val sayLabel = sayid "@"
+  val saytyp = sayid ":"
+  val sayglo = sayid "$"
+  val saytmp = sayid "%"
+  val saylbl = sayid "@"
 
   fun tystr T.Word = "w"
     | tystr T.Long = "l"
@@ -19,10 +19,142 @@ struct
     | tystr T.Double = "d"
     | tystr T.Byte = "b"
     | tystr T.HalfWord = "h"
-    | tystr (T.Aggregate _) = raise Fail "unreachable"
+    | tystr (T.Aggregate _) = raise Fail "impossible"
 
-  fun sayty out (T.Aggregate a) = sayAggTy out a
+  fun sayty out (T.Aggregate name) = saytyp out name
     | sayty out ty = say out (tystr ty)
+
+  fun sayval out (T.Temp name) = saytmp out name
+    | sayval out (T.Global name) = sayglo out name
+    | sayval out (T.Const i) = sayint out i
+
+  fun sayret out s NONE = say out s
+    | sayret out s (SOME v) = (say out s; say out " "; sayval out v)
+
+  val opinfo =
+    fn (T.Add(a, b)) => ("add", [a, b])
+     | (T.Sub(a, b)) => ("sub", [a, b])
+     | (T.Div(a, b)) => ("div", [a, b])
+     | (T.Mul(a, b)) => ("mul", [a, b])
+     | (T.Neg a) => ("neg", [a])
+     | (T.Udiv(a, b)) => ("udiv", [a, b])
+     | (T.Rem(a, b)) => ("rem", [a, b])
+     | (T.Urem(a, b)) => ("urem", [a, b])
+     | (T.Or(a, b)) => ("or", [a, b])
+     | (T.Xor(a, b)) => ("xor", [a, b])
+     | (T.And(a, b)) => ("and", [a, b])
+     | (T.Sar(a, b)) => ("sar", [a, b])
+     | (T.Shr(a, b)) => ("shr", [a, b])
+     | (T.Shl(a, b)) => ("shl", [a, b])
+     | (T.Stored(a, b)) => ("stored", [a, b])
+     | (T.Stores(a, b)) => ("stores", [a, b])
+     | (T.Storel(a, b)) => ("storel", [a, b])
+     | (T.Storew(a, b)) => ("storew", [a, b])
+     | (T.Storeh(a, b)) => ("storeh", [a, b])
+     | (T.Storeb(a, b)) => ("storeb", [a, b])
+     | (T.Loadd a) => ("loadd", [a])
+     | (T.Loads a) => ("loads", [a])
+     | (T.Loadl a) => ("loadl", [a])
+     | (T.Loadw a) => ("loadw", [a])
+     | (T.Loadsw a) => ("loadsw", [a])
+     | (T.Loaduw a) => ("loaduw", [a])
+     | (T.Loadsh a) => ("loadsh", [a])
+     | (T.Loaduh a) => ("loaduh", [a])
+     | (T.Loadsb a) => ("loadsb", [a])
+     | (T.Loadub a) => ("loadub", [a])
+     | (T.Alloc4 a) => ("alloc4", [a])
+     | (T.Alloc8 a) => ("alloc8", [a])
+     | (T.Alloc16 a) => ("alloc16", [a])
+     | (T.Ceqd(a, b)) => ("ceqd", [a, b])
+     | (T.Ceql(a, b)) => ("ceql", [a, b])
+     | (T.Ceqs(a, b)) => ("ceqs", [a, b])
+     | (T.Ceqw(a, b)) => ("ceqw", [a, b])
+     | (T.Cged(a, b)) => ("cged", [a, b])
+     | (T.Cges(a, b)) => ("cges", [a, b])
+     | (T.Cgtd(a, b)) => ("cgtd", [a, b])
+     | (T.Cgts(a, b)) => ("cgts", [a, b])
+     | (T.Cled(a, b)) => ("cled", [a, b])
+     | (T.Cles(a, b)) => ("cles", [a, b])
+     | (T.Cltd(a, b)) => ("cltd", [a, b])
+     | (T.Clts(a, b)) => ("clts", [a, b])
+     | (T.Cned(a, b)) => ("cned", [a, b])
+     | (T.Cnel(a, b)) => ("cnel", [a, b])
+     | (T.Cnes(a, b)) => ("cnes", [a, b])
+     | (T.Cnew(a, b)) => ("cnew", [a, b])
+     | (T.Cod(a, b)) => ("cod", [a, b])
+     | (T.Cos(a, b)) => ("cos", [a, b])
+     | (T.Csgel(a, b)) => ("csgel", [a, b])
+     | (T.Csgew(a, b)) => ("csgew", [a, b])
+     | (T.Csgtl(a, b)) => ("csgtl", [a, b])
+     | (T.Csgtw(a, b)) => ("csgtw", [a, b])
+     | (T.Cslel(a, b)) => ("cslel", [a, b])
+     | (T.Cslew(a, b)) => ("cslew", [a, b])
+     | (T.Csltl(a, b)) => ("csltl", [a, b])
+     | (T.Csltw(a, b)) => ("csltw", [a, b])
+     | (T.Cugel(a, b)) => ("cugel", [a, b])
+     | (T.Cugew(a, b)) => ("cugew", [a, b])
+     | (T.Cugtl(a, b)) => ("cugtl", [a, b])
+     | (T.Cugtw(a, b)) => ("cugtw", [a, b])
+     | (T.Culel(a, b)) => ("culel", [a, b])
+     | (T.Culew(a, b)) => ("culew", [a, b])
+     | (T.Cultl(a, b)) => ("cultl", [a, b])
+     | (T.Cultw(a, b)) => ("cultw", [a, b])
+     | (T.Cuod(a, b)) => ("cuod", [a, b])
+     | (T.Cuos(a, b)) => ("cuos", [a, b])
+     | (T.Dtosi a) => ("dtosi", [a])
+     | (T.Dtoui a) => ("dtoui", [a])
+     | (T.Exts a) => ("exts", [a])
+     | (T.Extsb a) => ("extsb", [a])
+     | (T.Extsh a) => ("extsh", [a])
+     | (T.Extsw a) => ("extsw", [a])
+     | (T.Extub a) => ("extub", [a])
+     | (T.Extuh a) => ("extuh", [a])
+     | (T.Extuw a) => ("extuw", [a])
+     | (T.Sltof a) => ("sltof", [a])
+     | (T.Ultof a) => ("ultof", [a])
+     | (T.Stosi a) => ("stosi", [a])
+     | (T.Stoui a) => ("stoui", [a])
+     | (T.Swtof a) => ("swtof", [a])
+     | (T.Uwtof a) => ("uwtof", [a])
+     | (T.Truncd a) => ("truncd", [a])
+     | (T.Cast a) => ("cast", [a])
+     | (T.Copy a) => ("copy", [a])
+     | (T.Vastart a) => ("vastart", [a])
+     | (T.Vaarg a) => ("vaarg", [a])
+     | _ => raise Fail "impossible"
+
+  fun sayinstr out (T.Call(name, args)) = let
+        val say = say out
+        fun sayarg (ty, v) = (sayty out ty; say " "; sayval out v; say ", ")
+         in say "call "; sayglo out name; say "("; app sayarg args; say ")"
+        end
+    | sayinstr out (T.Phi args) = let
+        val say = say out
+        fun sayarg (lbl, v) = (saylbl out lbl; say " "; sayval out v; say ", ")
+         in say "phi "; app sayarg args
+        end
+    | sayinstr out (T.Jmp lbl) = (say out "jmp "; saylbl out lbl)
+    | sayinstr out (T.Jnz(v, l1, l2)) =
+        (say out "jnz "; sayval out v; say out ", "; saylbl out l1;
+         say out ", "; saylbl out l2)
+    | sayinstr out (T.Ret v) = sayret out "ret" v
+    | sayinstr out (T.Retw v) = sayret out "retw" v
+    | sayinstr out T.Nop = say out "nop"
+    | sayinstr out instr = let
+        val (name, vals) = opinfo instr
+        in
+          say out name; say out " ";
+          case vals
+            of [v] => sayval out v
+             | [v1, v2] => (sayval out v1; say out ", "; sayval out v2)
+             | _ => raise Fail "impossible"
+        end
+
+  fun saystmt out (T.Assign(name, ty, instr)) =
+        (say out "\t"; saytmp out name; say out " ="; sayty out ty;
+         say out " "; sayinstr out instr; say out "\n")
+    | saystmt out (T.Volatile instr) =
+        (say out "\t"; sayinstr out instr; say out "\n")
 
   fun printTypeDef (out, {name, align, items}) = let
         val say = say out
@@ -31,7 +163,7 @@ struct
                if n > 1 then (say " "; sayint out n) else ();
                say ", ")
         in
-          say "type "; sayAggTy out name; say " =";
+          say "type "; saytyp out name; say " =";
           case align
             of NONE => ()
              | SOME i => (say " align "; sayint out i);
@@ -41,13 +173,13 @@ struct
   fun printDarkTypeDef (out, {name, align, size}) = let
         val say = say out
         in
-          say "type "; sayAggTy out name; say " = align "; sayint out align;
+          say "type "; saytyp out name; say " = align "; sayint out align;
           say " { "; sayint out size; say " }\n"
         end
 
   fun printDataDef (out, {name, exported, align, fields}) = let
         val say = say out
-        fun sayitem (T.DataSymbol a) = (say " "; sayGlobal out a)
+        fun sayitem (T.DataSymbol name) = (say " "; sayglo out name)
           | sayitem (T.DataStr s) = (say " \""; say(String.toString s); say "\"")
           | sayitem (T.DataConst i) = (say " "; sayint out i)
 
@@ -56,22 +188,37 @@ struct
           | sayfield (T.DataFieldZ i) = (say "z "; sayint out i; say ", ")
         in
           if exported then say "export " else ();
-          say "data "; sayGlobal out name; say " =";
+          say "data "; sayglo out name; say " =";
           case align
             of NONE => ()
              | SOME i => (say " align "; sayint out i);
           say " { "; app sayfield fields; say "}\n"
         end
 
-  fun printFn (out, {name, exported, params, variadic, result, stmts}) = let
+  fun printFn (out, {name, exported, params, variadic, result, blocks}) = let
         val say = say out
+        fun sayparam (ty, name) =
+              (sayty out ty; say " "; saytmp out name; say ", ")
+        fun sayblk {label, stmts, jump} =
+              (saylbl out label; say "\n"; app (saystmt out) stmts;
+               case jump
+                 of NONE => ()
+                  | SOME j => saystmt out (T.Volatile j))
         in
-          ()
+          if exported then say "export " else ();
+          say "function ";
+          case result
+            of NONE => ()
+             | SOME ty => (sayty out ty; say " ");
+          sayglo out name; say "("; app sayparam params; say ") {\n";
+          app sayblk blocks; say "}\n"
         end
 
-  fun printDef (out, T.Type d) = printTypeDef(out, d)
-    | printDef (out, T.OpaqueType d) = printDarkTypeDef(out, d)
+  fun printDef (out, T.Type t) = printTypeDef(out, t)
+    | printDef (out, T.OpaqueType t) = printDarkTypeDef(out, t)
     | printDef (out, T.Data d) = printDataDef(out, d)
-    | printDef (out, T.Function d) = printFn(out, d)
+    | printDef (out, T.Function f) = printFn(out, f)
+
+  fun printModule (out, m) = app (fn d => printDef(out, d)) m
 
 end

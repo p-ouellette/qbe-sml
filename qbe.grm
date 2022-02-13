@@ -1,7 +1,5 @@
 structure T = QbeTypes
 
-fun curry f x (y, z) = f(x, y, z)
-
 %%
 %name Qbe
 %term
@@ -73,6 +71,7 @@ fun curry f x (y, z) = f(x, y, z)
   | stmt of T.stmt
   | jump of T.instr
   | value of T.value
+  | ret of T.value option -> T.instr
   | instr1v of T.instr
   | instr2v of T.instr
   | call of T.instr
@@ -81,7 +80,6 @@ fun curry f x (y, z) = f(x, y, z)
   | arg of T.ty * T.value
   | phiargs of (Atom.atom * T.value) list
   | phiarg of Atom.atom * T.value
-  | ret of T.value option -> T.instr
   | instr1 of T.value -> T.instr
   | instr2 of T.value * T.value -> T.instr
 
@@ -169,14 +167,14 @@ stmts_opt :                               ([])
 stmts : stmt                              ([stmt])
       | stmt stmts                        (stmt::stmts)
 
-stmt : instr1v                            (T.Instr instr1v)
-     | instr2v                            (T.Instr instr2v)
-     | call                               (T.Instr call)
+stmt : instr1v                            (T.Volatile instr1v)
+     | instr2v                            (T.Volatile instr2v)
+     | call                               (T.Volatile call)
      | TMP EQ typ instr1v                 (T.Assign(TMP, typ, instr1v))
      | TMP EQ typ instr2v                 (T.Assign(TMP, typ, instr2v))
      | TMP EQ typ call                    (T.Assign(TMP, typ, call))
-     | TMP EQ typ PHI phiargs             (T.Instr(T.Phi phiargs))
-     | NOP                                (T.Instr T.Nop)
+     | TMP EQ typ PHI phiargs             (T.Volatile(T.Phi phiargs))
+     | NOP                                (T.Volatile T.Nop)
 
 jump : JMP LBL                            (T.Jmp LBL)
      | JNZ value COMMA LBL COMMA LBL      (T.Jnz(value, LBL1, LBL2))
@@ -186,6 +184,9 @@ jump : JMP LBL                            (T.Jmp LBL)
 value : TMP                               (T.Temp TMP)
       | GLO                               (T.Global GLO)
       | INT                               (T.Const INT)
+
+ret : RET                                 (T.Ret)
+    | RETW                                (T.Retw)
 
 instr1v : instr1 value                    (instr1 value)
 
@@ -206,9 +207,6 @@ phiargs : phiarg                          ([phiarg])
         | phiarg COMMA phiargs            (phiarg::phiargs)
 
 phiarg : LBL value                        ((LBL, value))
-
-ret : RET                                 (T.Ret)
-    | RETW                                (T.Retw)
 
 instr1 : NEG                              (T.Neg)
        | LOADD                            (T.Loadd)
@@ -264,39 +262,39 @@ instr2 : ADD                              (T.Add)
        | STOREW                           (T.Storew)
        | STOREH                           (T.Storeh)
        | STOREB                           (T.Storeb)
-       | CEQD                             (curry T.Ceq T.Double)
-       | CEQL                             (curry T.Ceq T.Long)
-       | CEQS                             (curry T.Ceq T.Single)
-       | CEQW                             (curry T.Ceq T.Word)
-       | CGED                             (curry T.Cge T.Double)
-       | CGES                             (curry T.Cge T.Single)
-       | CGTD                             (curry T.Cgt T.Double)
-       | CGTS                             (curry T.Cgt T.Single)
-       | CLED                             (curry T.Cle T.Double)
-       | CLES                             (curry T.Cle T.Single)
-       | CLTD                             (curry T.Clt T.Double)
-       | CLTS                             (curry T.Clt T.Single)
-       | CNED                             (curry T.Cne T.Double)
-       | CNEL                             (curry T.Cne T.Long)
-       | CNES                             (curry T.Cne T.Single)
-       | CNEW                             (curry T.Cne T.Word)
-       | COD                              (curry T.Co T.Double)
-       | COS                              (curry T.Co T.Single)
-       | CSGEL                            (curry T.Csge T.Long)
-       | CSGEW                            (curry T.Csge T.Word)
-       | CSGTL                            (curry T.Csgt T.Long)
-       | CSGTW                            (curry T.Csgt T.Word)
-       | CSLEL                            (curry T.Csle T.Long)
-       | CSLEW                            (curry T.Csle T.Word)
-       | CSLTL                            (curry T.Cslt T.Long)
-       | CSLTW                            (curry T.Cslt T.Word)
-       | CUGEL                            (curry T.Cuge T.Long)
-       | CUGEW                            (curry T.Cuge T.Word)
-       | CUGTL                            (curry T.Cugt T.Long)
-       | CUGTW                            (curry T.Cugt T.Word)
-       | CULEL                            (curry T.Cule T.Long)
-       | CULEW                            (curry T.Cule T.Word)
-       | CULTL                            (curry T.Cult T.Long)
-       | CULTW                            (curry T.Cult T.Word)
-       | CUOD                             (curry T.Cuo T.Double)
-       | CUOS                             (curry T.Cuo T.Single)
+       | CEQD                             (T.Ceqd)
+       | CEQL                             (T.Ceql)
+       | CEQS                             (T.Ceqs)
+       | CEQW                             (T.Ceqw)
+       | CGED                             (T.Cged)
+       | CGES                             (T.Cges)
+       | CGTD                             (T.Cgtd)
+       | CGTS                             (T.Cgts)
+       | CLED                             (T.Cled)
+       | CLES                             (T.Cles)
+       | CLTD                             (T.Cltd)
+       | CLTS                             (T.Clts)
+       | CNED                             (T.Cned)
+       | CNEL                             (T.Cnel)
+       | CNES                             (T.Cnes)
+       | CNEW                             (T.Cnew)
+       | COD                              (T.Cod)
+       | COS                              (T.Cos)
+       | CSGEL                            (T.Csgel)
+       | CSGEW                            (T.Csgew)
+       | CSGTL                            (T.Csgtl)
+       | CSGTW                            (T.Csgtw)
+       | CSLEL                            (T.Cslel)
+       | CSLEW                            (T.Cslew)
+       | CSLTL                            (T.Csltl)
+       | CSLTW                            (T.Csltw)
+       | CUGEL                            (T.Cugel)
+       | CUGEW                            (T.Cugew)
+       | CUGTL                            (T.Cugtl)
+       | CUGTW                            (T.Cugtw)
+       | CULEL                            (T.Culel)
+       | CULEW                            (T.Culew)
+       | CULTL                            (T.Cultl)
+       | CULTW                            (T.Cultw)
+       | CUOD                             (T.Cuod)
+       | CUOS                             (T.Cuos)

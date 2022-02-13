@@ -1,5 +1,5 @@
-structure QbeTypes : QBE_TYPES =
-struct
+signature QBE_TYPES =
+sig
 
 datatype ty = Word
             | Long

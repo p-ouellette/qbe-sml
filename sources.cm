@@ -3,6 +3,7 @@ Group is
 $/basis.cm
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
+datatypes.sig
 datatypes.sml
 parse.sig
 parse.sml
