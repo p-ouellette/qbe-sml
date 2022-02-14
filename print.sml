@@ -25,9 +25,13 @@ struct
   fun sayty out (T.Aggr name) = saytyp out name
     | sayty out ty = say out (tystr ty)
 
+  fun saycon out (T.Int i) = sayint out i
+    | saycon out (T.Flts f) = (say out "s_"; say out (Real.toString f))
+    | saycon out (T.Fltd f) = (say out "d_"; say out (Real.toString f))
+
   fun sayval out (T.Tmp name) = saytmp out name
     | sayval out (T.Glo name) = sayglo out name
-    | sayval out (T.Con i) = sayint out i
+    | sayval out (T.Con c) = saycon out c
 
   fun sayret out s NONE = say out s
     | sayret out s (SOME v) = (say out s; say out " "; sayval out v)
@@ -182,7 +186,7 @@ struct
         val say = say out
         fun sayitem (T.DataSym name) = (say " "; sayglo out name)
           | sayitem (T.DataStr s) = (say " \""; say s; say "\"")
-          | sayitem (T.DataCon i) = (say " "; sayint out i)
+          | sayitem (T.DataCon c) = (say " "; saycon out c)
 
         fun sayfield (T.DataTy(ty, items)) =
               (sayty out ty; app sayitem items; say ", ")

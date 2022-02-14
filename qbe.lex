@@ -12,6 +12,8 @@ fun eof () = T.EOF(!lineNum,!lineNum)
 
 fun ident s = Atom.atom(String.extract(s, 1, NONE))
 
+fun float s = valOf(Real.fromString(String.extract(s, 2, NONE)))
+
 fun makeString s = let
       val s = String.substring(s, 1, String.size s - 2)
        in T.STR(s,!lineNum,!lineNum)
@@ -140,8 +142,10 @@ end)
 ws=[\ \t];
 alpha=[A-Za-z];
 digit=[0-9];
+integer=\-?{digit}+;
 optsign=[-+]?;
-integer={optsign}{digit}+;
+real={optsign}({digit}+\.{digit}*|\.{digit}+)((e|E){optsign}{digit}+)?;
+inf=[iI][nN][fF]([iI][nN][iI][tT][yY])?;
 string=\"([^\"]|\\\")*\";
 kw=({alpha}|[._])({alpha}|[$._]|{digit})*;
 global=\$({kw}|{string});
@@ -149,14 +153,20 @@ global=\$({kw}|{string});
 %%
 {ws}+     => (continue());
 \n        => (nextLine(); continue());
+{integer} => (T.INT(valOf(Int.fromString yytext),!lineNum,!lineNum));
+s_{real}  => (T.FLTS(float yytext,!lineNum,!lineNum));
+d_{real}  => (T.FLTD(float yytext,!lineNum,!lineNum));
+s_\-{inf} => (T.FLTS(Real.negInf,!lineNum,!lineNum));
+s_\+{inf} => (T.FLTS(Real.posInf,!lineNum,!lineNum));
+d_\-{inf} => (T.FLTD(Real.negInf,!lineNum,!lineNum));
+d_\+{inf} => (T.FLTD(Real.posInf,!lineNum,!lineNum));
+{string}  => (makeString yytext);
 {kw}      => (KW.keyword(yytext,!lineNum,!lineNum) handle Keyword =>
               (error("unknown keyword "^yytext,!lineNum,!lineNum); continue()));
 ":"{kw}   => (T.TYP(ident yytext,!lineNum,!lineNum));
 {global}  => (T.GLO(ident yytext,!lineNum,!lineNum));
 "%"{kw}   => (T.TMP(ident yytext,!lineNum,!lineNum));
 "@"{kw}   => (T.LBL(ident yytext,!lineNum,!lineNum));
-{integer} => (T.INT(valOf(Int.fromString yytext),!lineNum,!lineNum));
-{string}  => (makeString yytext);
 "#".*     => (continue());
 ","       => (T.COMMA(!lineNum,!lineNum));
 "("       => (T.LPAREN(!lineNum,!lineNum));

@@ -30,6 +30,8 @@ structure T = QbeTypes
   | TMP of Atom.atom
   | LBL of Atom.atom
   | INT of int
+  | FLTS of real
+  | FLTD of real
   | STR of string
 
 %pos int
@@ -42,6 +44,8 @@ structure T = QbeTypes
 %value TMP (Atom.atom "%bogus")
 %value LBL (Atom.atom "@bogus")
 %value INT (1)
+%value FLTS (1.0)
+%value FLTD (1.0)
 %value STR ("")
 
 %keyword TYPE ALIGN EXPORT DATA FUNCTION
@@ -60,6 +64,7 @@ structure T = QbeTypes
   | data_field of T.datafield
   | data_items of T.dataitem list
   | data_item of T.dataitem
+  | const of T.const
   | typ_opt of T.ty option
   | params of {params: (T.ty * Atom.atom) list, variadic: bool}
   | param of T.ty * Atom.atom
@@ -136,7 +141,11 @@ data_items : data_item                    ([data_item])
 
 data_item : GLO                           (T.DataSym GLO)
           | STR                           (T.DataStr STR)
-          | INT                           (T.DataCon INT)
+          | const                         (T.DataCon const)
+
+const : INT                               (T.Int INT)
+      | FLTS                              (T.Flts FLTS)
+      | FLTD                              (T.Fltd FLTD)
 
 typ_opt :                                 (NONE)
         | typ                             (SOME typ)
@@ -175,7 +184,7 @@ jump : JMP LBL                            (T.Jmp LBL)
 
 value : TMP                               (T.Tmp TMP)
       | GLO                               (T.Glo GLO)
-      | INT                               (T.Con INT)
+      | const                             (T.Con const)
 
 ret : RET                                 (T.Ret)
     | RETW                                (T.Retw)

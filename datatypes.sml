@@ -9,9 +9,13 @@ datatype ty = W
             | H
             | Aggr of Atom.atom
 
+datatype const = Int of int
+               | Flts of real
+               | Fltd of real
+
 datatype value = Tmp of Atom.atom
                | Glo of Atom.atom
-               | Con of int
+               | Con of const
 
 datatype instr = Add of value * value
                | Sub of value * value
@@ -118,7 +122,7 @@ type darktypedef = {name: Atom.atom, align: int, size: int}
 
 datatype dataitem = DataSym of Atom.atom
                   | DataStr of string
-                  | DataCon of int
+                  | DataCon of const
 
 datatype datafield = DataTy of ty * dataitem list
                    | DataZ of int
