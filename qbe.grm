@@ -4,7 +4,7 @@ structure T = QbeTypes
 %name Qbe
 %term
     EOF
-  | TYPE | ALIGN | EXPORT | DATA | FUNCTION
+  | TYPE | ALIGN | EXPORT | SECTION | DATA | FUNCTION
   | ADD | SUB | DIV | MUL | NEG | UDIV | REM | UREM | OR | XOR | AND | SAR | SHR
   | SHL
   | STORED | STORES | STOREL | STOREW | STOREH | STOREB
@@ -48,7 +48,7 @@ structure T = QbeTypes
 %value FLTD (1.0)
 %value STR ("")
 
-%keyword TYPE ALIGN EXPORT DATA FUNCTION
+%keyword TYPE ALIGN EXPORT SECTION DATA FUNCTION
 %prefer LBL
 
 %nonterm
@@ -58,7 +58,8 @@ structure T = QbeTypes
   | tylist of (T.ty * int) list
   | ty_num of T.ty * int
   | typ of T.ty
-  | linkage of {export: bool}
+  | linkage of T.linkage
+  | section of T.section
   | align_opt of int option
   | data_fields of T.datafield list
   | data_field of T.datafield
@@ -97,12 +98,12 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,item
     | TYPE TYP EQ ALIGN INT LBRACE INT RBRACE   (T.OpaqueType{name=TYP,align=INT1,size=INT2})
     | linkage DATA GLO EQ align_opt LBRACE data_fields RBRACE
         (T.Data {name = GLO,
-                 exported = #export linkage,
+                 linkage = linkage,
                  align = align_opt,
                  fields = data_fields})
     | linkage FUNCTION typ_opt GLO LPAREN params RPAREN LBRACE blocks RBRACE
         (T.Function {name = GLO,
-                     exported = #export linkage,
+                     linkage = linkage,
                      params = #params params,
                      variadic = #variadic params,
                      result = typ_opt,
@@ -123,8 +124,13 @@ typ : W                                   (T.W)
     | H                                   (T.H)
     | TYP                                 (T.Aggr TYP)
 
-linkage :                                 ({export=false})
-        | EXPORT                          ({export=true})
+linkage :                                 ({exported=false, section=NONE})
+        | EXPORT                          ({exported=true, section=NONE})
+        | EXPORT section                  ({exported=true, section=SOME section})
+        | section EXPORT                  ({exported=true, section=SOME section})
+
+section : SECTION STR                     ({name=STR, flags=NONE})
+        | SECTION STR STR                 ({name=STR1, flags=SOME STR2})
 
 align_opt :                               (NONE)
           | ALIGN INT                     (SOME INT)

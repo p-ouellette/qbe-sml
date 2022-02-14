@@ -29,6 +29,17 @@ struct
     | saycon out (T.Flts f) = (say out "s_"; say out (Real.toString f))
     | saycon out (T.Fltd f) = (say out "d_"; say out (Real.toString f))
 
+  fun saylnk out {exported, section} =
+        (if exported then say out "export " else ();
+         case section
+           of NONE => ()
+            | SOME {name, flags} =>
+                (say out "section \""; say out name; say out "\" ";
+                 case flags
+                   of NONE => ()
+                    | SOME s => (say out "\""; say out s; say out "\" ");
+                 say out "\n"))
+
   fun sayval out (T.Tmp name) = saytmp out name
     | sayval out (T.Glo name) = sayglo out name
     | sayval out (T.Con c) = saycon out c
@@ -182,7 +193,7 @@ struct
           say " { "; sayint out size; say " }\n"
         end
 
-  fun printData (out, {name, exported, align, fields}) = let
+  fun printData (out, {name, linkage, align, fields}) = let
         val say = say out
         fun sayitem (T.DataSym name) = (say " "; sayglo out name)
           | sayitem (T.DataStr s) = (say " \""; say s; say "\"")
@@ -192,15 +203,14 @@ struct
               (sayty out ty; app sayitem items; say ", ")
           | sayfield (T.DataZ i) = (say "z "; sayint out i; say ", ")
         in
-          if exported then say "export " else ();
-          say "data "; sayglo out name; say " =";
+          saylnk out linkage; say "data "; sayglo out name; say " =";
           case align
             of NONE => ()
              | SOME i => (say " align "; sayint out i);
           say " { "; app sayfield fields; say "}\n"
         end
 
-  fun printFn (out, {name, exported, params, variadic, result, blocks}) = let
+  fun printFn (out, {name, linkage, params, variadic, result, blocks}) = let
         val say = say out
         fun sayparam (ty, name) =
               (sayty out ty; say " "; saytmp out name; say ", ")
@@ -210,8 +220,7 @@ struct
                  of NONE => ()
                   | SOME j => saystmt out (T.Volatile j))
         in
-          if exported then say "export " else ();
-          say "function ";
+          saylnk out linkage; say "function ";
           case result
             of NONE => ()
              | SOME ty => (sayty out ty; say " ");

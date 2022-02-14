@@ -27,6 +27,7 @@ structure KW = KeywordFn(struct
     [("type", T.TYPE),
      ("align", T.ALIGN),
      ("export", T.EXPORT),
+     ("section", T.SECTION),
      ("data", T.DATA),
      ("function", T.FUNCTION),
      ("add", T.ADD),

@@ -120,6 +120,10 @@ type typedef = {name: Atom.atom,
 
 type darktypedef = {name: Atom.atom, align: int, size: int}
 
+type section = {name: string, flags: string option}
+
+type linkage = {exported: bool, section: section option}
+
 datatype dataitem = DataSym of Atom.atom
                   | DataStr of string
                   | DataCon of const
@@ -128,7 +132,7 @@ datatype datafield = DataTy of ty * dataitem list
                    | DataZ of int
 
 type datadef = {name: Atom.atom,
-                exported: bool,
+                linkage: linkage,
                 align: int option,
                 fields: datafield list}
 
@@ -140,7 +144,7 @@ type block = {label: Atom.atom,
               jump: instr option}
 
 type func = {name: Atom.atom,
-             exported: bool,
+             linkage: linkage,
              params: (ty * Atom.atom) list,
              variadic: bool,
              result: ty option,
