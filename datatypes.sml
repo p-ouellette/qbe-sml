@@ -17,6 +17,11 @@ datatype value = Tmp of Atom.atom
                | Glo of Atom.atom
                | Con of const
 
+type call = {name: Atom.atom,
+             envp: value option,
+             args: (ty * value) list,
+             vararg: int option}
+
 datatype instr = Add of value * value
                | Sub of value * value
                | Div of value * value
@@ -104,9 +109,7 @@ datatype instr = Add of value * value
                | Truncd of value
                | Cast of value
                | Copy of value
-               | Call of {name: Atom.atom,
-                          envp: value option,
-                          args: (ty * value) list}
+               | Call of call
                | Vastart of value
                | Vaarg of value
                | Phi of (Atom.atom * value) list

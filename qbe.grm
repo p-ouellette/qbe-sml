@@ -82,9 +82,11 @@ structure T = QbeTypes
   | instr1v of T.instr
   | instr2v of T.instr
   | call of T.instr
-  | env_args of {envp: T.value option, args: (T.ty * T.value) list}
-  | args of (T.ty * T.value) list
-  | arg of T.ty * T.value
+  | env_args of {envp: T.value option,
+                 args: (T.ty * T.value) list,
+                 vararg: int option}
+  | args of {args: (T.ty * T.value) list, vararg: int option, i: int}
+  | arg of (T.ty * T.value) option
   | phiargs of (Atom.atom * T.value) list
   | phiarg of Atom.atom * T.value
   | instr1 of T.value -> T.instr
@@ -217,17 +219,42 @@ instr2v : instr2 value COMMA value        (instr2(value1, value2))
 
 call : CALL GLO LPAREN env_args RPAREN    (T.Call {name = GLO,
                                                    envp = #envp env_args,
-                                                   args = #args env_args})
+                                                   args = #args env_args,
+                                                   vararg = #vararg env_args})
 
-env_args : args                           ({envp=NONE, args=args})
-         | ENV value                      ({envp=SOME value, args=[]})
-         | ENV value COMMA args           ({envp=SOME value, args=args})
+env_args : args
+(
+  {envp = NONE,
+   args = #args args,
+   vararg = Option.map (fn i => length(#args args) - i) (#vararg args)}
+)
+         | ENV value                  ({envp=SOME value, args=[], vararg=NONE})
+         | ENV value COMMA args
+(
+  {envp = SOME value,
+   args = #args args,
+   vararg = Option.map (fn i => length(#args args) - i) (#vararg args)}
+)
 
-args :                                    ([])
-     | arg                                ([arg])
-     | arg COMMA args                     (arg::args)
+args :                                    ({args=[], vararg=NONE, i= ~1})
+     | arg
+(
+   case arg
+     of NONE => {args=[], vararg=SOME 0, i=0}
+      | SOME a => {args=[a], vararg=NONE, i=0}
+)
+     | arg COMMA args
+(
+  let val {args, vararg, i} = args
+      val i = i + 1
+   in case arg
+        of NONE => {args=args, vararg=SOME i, i=i}
+         | SOME a => {args=a::args, vararg=vararg, i=i}
+  end
+)
 
-arg : typ value                           ((typ, value))
+arg : typ value                           (SOME(typ, value))
+    | DOTS                                (NONE) (* variadic marker *)
 
 phiargs : phiarg                          ([phiarg])
         | phiarg COMMA phiargs            (phiarg::phiargs)

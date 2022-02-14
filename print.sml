@@ -139,15 +139,23 @@ struct
      | (T.Vaarg a) => ("vaarg", [a])
      | _ => raise Fail "impossible"
 
-  fun sayinstr out (T.Call {name, envp, args}) = let
+  fun sayinstr out (T.Call {name, envp, args, vararg}) = let
         val say = say out
-        fun sayarg (ty, v) = (sayty out ty; say " "; sayval out v; say ", ")
+        fun sayarg ((ty, v), i) =
+              (case vararg
+                 of NONE => ()
+                  | SOME i' => if i' = i then say "..., " else ();
+               sayty out ty; say " "; sayval out v; say ", ";
+               i + 1)
         in
           say "call "; sayglo out name; say "(";
           case envp
             of NONE => ()
              | SOME v => (say "env "; sayval out v; say ", ");
-          app sayarg args; say ")"
+          foldl sayarg 0 args;
+          case vararg
+            of NONE => ()
+             | SOME i => if i = length args then say "...)" else say ")"
         end
     | sayinstr out (T.Phi args) = let
         val say = say out
