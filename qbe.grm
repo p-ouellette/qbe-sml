@@ -1,5 +1,4 @@
 structure T = QbeTypes
-structure G = QbeGen
 
 %%
 %name Qbe
@@ -25,7 +24,7 @@ structure G = QbeGen
   | JMP | JNZ | RET | RETW
   | NOP
   | W | L | S | D | B | H | Z
-  | COMMA | LBRACE | RBRACE | LPAREN | RPAREN | EQ | DOTS
+  | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | EQ | DOTS
   | TYP of Atom.atom
   | GLO of Atom.atom
   | TMP of Atom.atom
@@ -49,8 +48,8 @@ structure G = QbeGen
 %prefer LBL
 
 %nonterm
-    module of G.module
-  | defs of G.module
+    module of T.def list
+  | defs of T.def list
   | def of  T.def
   | tylist of (T.ty * int) list
   | ty_num of T.ty * int
@@ -85,8 +84,8 @@ structure G = QbeGen
 
 module : defs                           (defs)
 
-defs :                                  (G.newModule())
-     | defs def                         (G.addDef(defs, def); defs)
+defs :                                  ([])
+     | def defs                         (def::defs)
 
 def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,items=tylist})
     | TYPE TYP EQ ALIGN INT LBRACE tylist RBRACE(T.Type{name=TYP,align=SOME INT,items=tylist})

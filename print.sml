@@ -221,6 +221,8 @@ struct
     | printDef (out, T.Data d) = printData(out, d)
     | printDef (out, T.Function f) = printFn(out, f)
 
-  fun printModule (out, m) = app (fn d => printDef(out, d)) (G.defs m)
+  fun printDefs (out, defs) = app (fn d => printDef(out, d)) defs
+
+  fun printModule (out, m) = printDefs(out, G.defs m)
 
 end

@@ -1,4 +1,4 @@
 signature QBE_PARSE =
   sig
-    val parse : string -> QbeGen.module
+    val parse : string -> QbeTypes.def list
   end
