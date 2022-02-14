@@ -20,6 +20,7 @@ is
   datatypes.sml
   gen.sig
   gen.sml
+  interface.sml
   parse.sig
   parse.sml
   print.sig

@@ -1,24 +1,26 @@
 structure T = Tokens
-type pos = int
+structure Interface = Interface
+open Interface
+type pos = Interface.pos
 type svalue = T.svalue
 type ('a,'b) token = ('a,'b) T.token
 type lexresult = (svalue,pos) token
 
-val lineNum = ref 0
+exception Keyword
+
 fun eof () = T.EOF(!lineNum,!lineNum)
 
 fun ident s = Atom.atom(String.extract(s, 1, NONE))
 
 fun makeString s = let
       val s = String.substring(s, 1, String.size s - 2)
-       in T.STR(valOf(String.fromString s),!lineNum,!lineNum)
+       in T.STR(s,!lineNum,!lineNum)
       end
 
 structure KW = KeywordFn(struct
   type token = lexresult
-  type pos = int
-  fun ident (id, p1, _) =
-        raise Fail("bad token '" ^ Atom.toString id ^ "' at line " ^ Int.toString p1)
+  type pos = Interface.pos
+  fun ident _ = raise Keyword
   val keywords =
     [("type", T.TYPE),
      ("align", T.ALIGN),
@@ -127,35 +129,39 @@ structure KW = KeywordFn(struct
      ("d", T.D),
      ("b", T.B),
      ("h", T.H),
-     ("z", T.Z)
+     ("z", T.Z),
+     ("...", T.DOTS)
     ]
 end)
 
 %%
-%header (functor QbeLexFun(structure Tokens : Qbe_TOKENS));
+%header (functor QbeLexFun(structure Tokens : Qbe_TOKENS
+                           structure Interface : INTERFACE));
 ws=[\ \t];
 alpha=[A-Za-z];
 digit=[0-9];
-id={alpha}({alpha}|{digit})*;
-optsign=(\+|\-)?;
+optsign=[-+]?;
 integer={optsign}{digit}+;
+string=\"([^\"]|\\\")*\";
+kw=({alpha}|[._])({alpha}|[$._]|{digit})*;
+global=\$({kw}|{string});
 
 %%
-{ws}+      => (continue());
-\n         => (lineNum := !lineNum + 1; continue());
-{id}+      => (KW.keyword(yytext,!lineNum,!lineNum));
-":"{id}    => (T.TYP(ident yytext,!lineNum,!lineNum));
-"$"{id}    => (T.GLO(ident yytext,!lineNum,!lineNum));
-"%"{id}    => (T.TMP(ident yytext,!lineNum,!lineNum));
-"@"{id}    => (T.LBL(ident yytext,!lineNum,!lineNum));
-{integer}  => (T.INT(valOf(Int.fromString yytext),!lineNum,!lineNum));
-\"[^\"]*\" => (makeString yytext);
-#.*        => (continue());
-","        => (T.COMMA(!lineNum,!lineNum));
-"{"        => (T.LBRACE(!lineNum,!lineNum));
-"}"        => (T.RBRACE(!lineNum,!lineNum));
-"("        => (T.LPAREN(!lineNum,!lineNum));
-")"        => (T.RPAREN(!lineNum,!lineNum));
-"="        => (T.EQ(!lineNum,!lineNum));
-"..."      => (T.DOTS(!lineNum,!lineNum));
-.          => (raise Fail("bad character at line " ^ Int.toString(!lineNum)));
+{ws}+     => (continue());
+\n        => (nextLine(); continue());
+{kw}      => (KW.keyword(yytext,!lineNum,!lineNum) handle Keyword =>
+              (error("unknown keyword "^yytext,!lineNum,!lineNum); continue()));
+":"{kw}   => (T.TYP(ident yytext,!lineNum,!lineNum));
+{global}  => (T.GLO(ident yytext,!lineNum,!lineNum));
+"%"{kw}   => (T.TMP(ident yytext,!lineNum,!lineNum));
+"@"{kw}   => (T.LBL(ident yytext,!lineNum,!lineNum));
+{integer} => (T.INT(valOf(Int.fromString yytext),!lineNum,!lineNum));
+{string}  => (makeString yytext);
+"#".*     => (continue());
+","       => (T.COMMA(!lineNum,!lineNum));
+"("       => (T.LPAREN(!lineNum,!lineNum));
+")"       => (T.RPAREN(!lineNum,!lineNum));
+"{"       => (T.LBRACE(!lineNum,!lineNum));
+"}"       => (T.RBRACE(!lineNum,!lineNum));
+"="       => (T.EQ(!lineNum,!lineNum));
+.         => (error("invalid character "^yytext,!lineNum,!lineNum); continue());

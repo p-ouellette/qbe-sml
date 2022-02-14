@@ -181,7 +181,7 @@ struct
   fun printData (out, {name, exported, align, fields}) = let
         val say = say out
         fun sayitem (T.DataSym name) = (say " "; sayglo out name)
-          | sayitem (T.DataStr s) = (say " \""; say(String.toString s); say "\"")
+          | sayitem (T.DataStr s) = (say " \""; say s; say "\"")
           | sayitem (T.DataCon i) = (say " "; sayint out i)
 
         fun sayfield (T.DataTy(ty, items)) =
