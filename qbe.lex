@@ -133,6 +133,7 @@ structure KW = KeywordFn(struct
      ("b", T.B),
      ("h", T.H),
      ("z", T.Z),
+     ("env", T.ENV),
      ("...", T.DOTS)
     ]
 end)

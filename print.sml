@@ -139,10 +139,15 @@ struct
      | (T.Vaarg a) => ("vaarg", [a])
      | _ => raise Fail "impossible"
 
-  fun sayinstr out (T.Call(name, args)) = let
+  fun sayinstr out (T.Call {name, envp, args}) = let
         val say = say out
         fun sayarg (ty, v) = (sayty out ty; say " "; sayval out v; say ", ")
-         in say "call "; sayglo out name; say "("; app sayarg args; say ")"
+        in
+          say "call "; sayglo out name; say "(";
+          case envp
+            of NONE => ()
+             | SOME v => (say "env "; sayval out v; say ", ");
+          app sayarg args; say ")"
         end
     | sayinstr out (T.Phi args) = let
         val say = say out
@@ -212,7 +217,7 @@ struct
           say " { "; app sayfield fields; say "}\n"
         end
 
-  fun printFn (out, {name, linkage, params, variadic, result, blocks}) = let
+  fun printFn (out, {name, linkage, params, envp, variadic, result, blocks}) = let
         val say = say out
         fun sayparam (ty, name) =
               (sayty out ty; say " "; saytmp out name; say ", ")
@@ -226,7 +231,11 @@ struct
           case result
             of NONE => ()
              | SOME ty => (sayty out ty; say " ");
-          sayglo out name; say "("; app sayparam params;
+          sayglo out name; say "(";
+          case envp
+            of NONE => ()
+             | SOME t => (say "env "; saytmp out t; say ", ");
+          app sayparam params;
           if variadic then say "..." else ();
           say ") {\n"; app sayblk blocks; say "}\n"
         end

@@ -24,7 +24,7 @@ structure T = QbeTypes
   | JMP | JNZ | RET | RETW
   | NOP
   | W | L | S | D | B | H | Z
-  | PLUS | EQ | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | DOTS
+  | PLUS | EQ | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | ENV | DOTS
   | TYP of Atom.atom
   | GLO of Atom.atom
   | TMP of Atom.atom
@@ -67,6 +67,9 @@ structure T = QbeTypes
   | data_item of T.dataitem
   | const of T.const
   | typ_opt of T.ty option
+  | env_params of {params: (T.ty * Atom.atom) list,
+                   envp: Atom.atom option,
+                   variadic: bool}
   | params of {params: (T.ty * Atom.atom) list, variadic: bool}
   | param of T.ty * Atom.atom
   | blocks of T.block list
@@ -79,6 +82,7 @@ structure T = QbeTypes
   | instr1v of T.instr
   | instr2v of T.instr
   | call of T.instr
+  | env_args of {envp: T.value option, args: (T.ty * T.value) list}
   | args of (T.ty * T.value) list
   | arg of T.ty * T.value
   | phiargs of (Atom.atom * T.value) list
@@ -101,11 +105,12 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,item
                  linkage = linkage,
                  align = align_opt,
                  fields = data_fields})
-    | linkage FUNCTION typ_opt GLO LPAREN params RPAREN LBRACE blocks RBRACE
+    | linkage FUNCTION typ_opt GLO LPAREN env_params RPAREN LBRACE blocks RBRACE
         (T.Function {name = GLO,
                      linkage = linkage,
-                     params = #params params,
-                     variadic = #variadic params,
+                     params = #params env_params,
+                     envp = #envp env_params,
+                     variadic = #variadic env_params,
                      result = typ_opt,
                      blocks = blocks})
 
@@ -157,6 +162,16 @@ const : INT                               (T.Int INT)
 typ_opt :                                 (NONE)
         | typ                             (SOME typ)
 
+env_params : params                       ({params = #params params,
+                                            envp = NONE,
+                                            variadic = #variadic params})
+           | ENV TMP                      ({params = [],
+                                            envp = SOME TMP,
+                                            variadic = false})
+           | ENV TMP COMMA params         ({params = #params params,
+                                            envp = SOME TMP,
+                                            variadic = #variadic params})
+
 params :                                  ({params=[], variadic=false})
        | DOTS                             ({params=[], variadic=true})
        | DOTS COMMA                       ({params=[], variadic=true})
@@ -200,7 +215,13 @@ instr1v : instr1 value                    (instr1 value)
 
 instr2v : instr2 value COMMA value        (instr2(value1, value2))
 
-call : CALL GLO LPAREN args RPAREN        (T.Call(GLO, args))
+call : CALL GLO LPAREN env_args RPAREN    (T.Call {name = GLO,
+                                                   envp = #envp env_args,
+                                                   args = #args env_args})
+
+env_args : args                           ({envp=NONE, args=args})
+         | ENV value                      ({envp=SOME value, args=[]})
+         | ENV value COMMA args           ({envp=SOME value, args=args})
 
 args :                                    ([])
      | arg                                ([arg])

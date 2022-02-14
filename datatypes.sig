@@ -104,7 +104,9 @@ datatype instr = Add of value * value
                | Truncd of value
                | Cast of value
                | Copy of value
-               | Call of Atom.atom * (ty * value) list
+               | Call of {name: Atom.atom,
+                          envp: value option,
+                          args: (ty * value) list}
                | Vastart of value
                | Vaarg of value
                | Phi of (Atom.atom * value) list
@@ -146,6 +148,7 @@ type block = {label: Atom.atom,
 type func = {name: Atom.atom,
              linkage: linkage,
              params: (ty * Atom.atom) list,
+             envp: Atom.atom option,
              variadic: bool,
              result: ty option,
              blocks: block list}
