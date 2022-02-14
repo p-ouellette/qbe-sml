@@ -124,7 +124,7 @@ type section = {name: string, flags: string option}
 
 type linkage = {exported: bool, section: section option}
 
-datatype dataitem = DataSym of Atom.atom
+datatype dataitem = DataSym of Atom.atom * int
                   | DataStr of string
                   | DataCon of const
 

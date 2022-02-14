@@ -24,7 +24,7 @@ structure T = QbeTypes
   | JMP | JNZ | RET | RETW
   | NOP
   | W | L | S | D | B | H | Z
-  | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | EQ | DOTS
+  | PLUS | EQ | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | DOTS
   | TYP of Atom.atom
   | GLO of Atom.atom
   | TMP of Atom.atom
@@ -145,7 +145,8 @@ data_field : typ data_items               (T.DataTy(typ, data_items))
 data_items : data_item                    ([data_item])
            | data_item data_items         (data_item::data_items)
 
-data_item : GLO                           (T.DataSym GLO)
+data_item : GLO                           (T.DataSym(GLO, 0))
+          | GLO PLUS INT                  (T.DataSym(GLO, INT))
           | STR                           (T.DataStr STR)
           | const                         (T.DataCon const)
 

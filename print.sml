@@ -195,7 +195,9 @@ struct
 
   fun printData (out, {name, linkage, align, fields}) = let
         val say = say out
-        fun sayitem (T.DataSym name) = (say " "; sayglo out name)
+        fun sayitem (T.DataSym(name, off)) =
+              (say " "; sayglo out name;
+               if off > 0 then (say " + "; sayint out off) else ())
           | sayitem (T.DataStr s) = (say " \""; say s; say "\"")
           | sayitem (T.DataCon c) = (say " "; saycon out c)
 
