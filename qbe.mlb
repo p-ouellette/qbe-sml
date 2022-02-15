@@ -10,6 +10,7 @@ local
   gen.sml
   print.sig
   print.sml
+  interface.sml
   qbe.grm.sig
   qbe.grm.sml
   qbe.lex.sml
