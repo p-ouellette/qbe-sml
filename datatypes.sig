@@ -20,7 +20,8 @@ datatype value = Tmp of Atom.atom
 type call = {name: Atom.atom,
              envp: value option,
              args: (ty * value) list,
-           (* index of first variadic argument (not counting env argument) *)
+           (* index of first variadic argument in `args` or `length args` if a
+            * variadic function is called with no variadic arguments *)
              vararg: int option}
 
 datatype instr = Add of value * value

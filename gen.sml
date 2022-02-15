@@ -11,12 +11,4 @@ struct
 
   fun addDef (m, def) = m := def :: !m
 
-  fun addType (m, t) = m := T.Type t :: !m
-
-  fun addOpaqueType (m, t) = m := T.OpaqueType t :: !m
-
-  fun addData (m, d) = m := T.Data d :: !m
-
-  fun addFunc (m, f) = m := T.Function f :: !m
-
 end

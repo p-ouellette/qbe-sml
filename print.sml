@@ -155,7 +155,8 @@ struct
           foldl sayarg 0 args;
           case vararg
             of NONE => ()
-             | SOME i => if i = length args then say "...)" else say ")"
+             | SOME i => if i = length args then say "..." else ();
+          say ")"
         end
     | sayinstr out (T.Phi args) = let
         val say = say out

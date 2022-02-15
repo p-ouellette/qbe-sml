@@ -1,30 +1,53 @@
 structure T = QbeTypes
 val id = Atom.atom
 
-val str : T.datadef =
-      {name = id "str",
-       linkage = {exported=false, section=NONE},
-       align = NONE,
-       fields = [T.DataTy(T.B, [T.DataStr "hello world"]),
-                 T.DataTy(T.B, [T.DataCon(T.Int 0)])]}
+val stmts =
+  [T.Assign(id "c", T.W, T.Add(T.Tmp(id "a"), T.Tmp(id "b")))]
+val start = {label = id "start",
+             stmts = stmts,
+             jump = SOME(T.Ret(SOME(T.Tmp(id "c"))))}
+val add =
+  T.Function {name = id "add",
+              linkage = {exported=false, section=NONE},
+              params = [(T.W, id "a"), (T.W, id "b")],
+              envp = NONE,
+              variadic = false,
+              result = SOME T.W,
+              blocks = [start]}
 
-val stmts : T.stmt list =
-  [T.Assign(id "r", T.W, T.Call(id "puts", [(T.L, T.Glo(id "str"))]))]
-val start : T.block =
-      {label = id "start",
-       stmts = stmts,
-       jump = SOME(T.Ret(SOME(T.Con(T.Int 0))))}
-val main : T.func =
-      {name = id "main",
-       linkage = {exported=false, section=NONE},
-       params = [],
-       variadic = false,
-       result = SOME T.W,
-       blocks = [start]}
+val stmts =
+  [T.Assign(id "r", T.W,
+            T.Call {name = id "add",
+                    envp = NONE,
+                    args = [(T.W, T.Con(T.Int 1)), (T.W, T.Con(T.Int 1))],
+                    vararg = NONE}),
+   T.Volatile(T.Call {name = id "printf",
+                      envp = NONE,
+                      args = [(T.L, T.Glo(id "fmt")), (T.W, T.Tmp(id "r"))],
+                      vararg = SOME 1})]
+val start = {label = id "start",
+             stmts = stmts,
+             jump = SOME(T.Ret(SOME(T.Con(T.Int 0))))}
+val main =
+  T.Function {name = id "main",
+              linkage = {exported=true, section=NONE},
+              params = [],
+              envp = NONE,
+              variadic = false,
+              result = SOME T.W,
+              blocks = [start]}
+
+val fmt =
+  T.Data {name = id "fmt",
+          linkage = {exported=false, section=NONE},
+          align = NONE,
+          fields = [T.DataTy(T.B, [T.DataStr "One and one make %d!\\n"]),
+                    T.DataTy(T.B, [T.DataCon(T.Int 0)])]}
 
 val m = QbeGen.newModule()
-val _ = QbeGen.addData(m, str)
-val _ = QbeGen.addFunc(m, main)
+val _ = QbeGen.addDef(m, add)
+val _ = QbeGen.addDef(m, main)
+val _ = QbeGen.addDef(m, fmt)
 val _ = QbePrint.printModule(TextIO.stdOut, m)
 
 val defs = QbeParse.parse "hello.ssa"
