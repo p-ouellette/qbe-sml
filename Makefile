@@ -1,13 +1,27 @@
-PARSER_SML = qbe.lex.sml qbe.grm.sig qbe.grm.sml
+SML_SRC = datatypes.sig \
+	  datatypes.sml \
+	  gen.sig \
+	  gen.sml \
+	  print.sig \
+	  print.sml \
+	  interface.sml \
+	  qbe.grm.sig \
+	  qbe.grm.sml \
+	  qbe.lex.sml \
+	  parse.sig \
+	  parse.sml
+GEN_SRC = qbe.lex.sml qbe.grm.sig qbe.grm.sml
 
-examples/hello: examples/hello.mlb examples/hello.sml $(PARSER_SML)
+examples/hello: examples/hello.mlb examples/hello.sml $(SML_SRC)
 	mlton examples/hello.mlb
 
-qbe.lex.sml: qbe.lex
-	mllex qbe.lex
+%.lex.sml: %.lex
+	mllex $<
 
-qbe.grm.sig qbe.grm.sml: qbe.grm
-	mlyacc qbe.grm
+%.grm.sig %.grm.sml: %.grm
+	mlyacc $<
 
 clean:
-	rm -rf $(PARSER_SML) qbe.grm.desc examples/hello
+	rm -rf $(GEN_SRC) qbe.grm.desc examples/hello
+
+.PHONY: clean
