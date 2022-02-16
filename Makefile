@@ -10,7 +10,6 @@ SML_SRC = datatypes.sig \
 	  qbe.lex.sml \
 	  parse.sig \
 	  parse.sml
-GEN_SRC = qbe.lex.sml qbe.grm.sig qbe.grm.sml
 
 examples/hello: examples/hello.mlb examples/hello.sml $(SML_SRC)
 	mlton examples/hello.mlb
@@ -22,6 +21,6 @@ examples/hello: examples/hello.mlb examples/hello.sml $(SML_SRC)
 	mlyacc $<
 
 clean:
-	rm -rf $(GEN_SRC) qbe.grm.desc examples/hello
+	rm -rf qbe.lex.sml qbe.grm.sig qbe.grm.sml qbe.grm.desc examples/hello
 
 .PHONY: clean

@@ -25,7 +25,7 @@ struct
   fun sayty out (T.Aggr name) = saytyp out name
     | sayty out ty = say out (tystr ty)
 
-  fun saycon out (T.Int i) = sayint out i
+  fun saycon out (T.Int i) = say out (Int64.toString i)
     | saycon out (T.Flts f) = (say out "s_"; say out (Real.toString f))
     | saycon out (T.Fltd f) = (say out "d_"; say out (Real.toString f))
 

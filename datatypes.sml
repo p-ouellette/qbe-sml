@@ -9,7 +9,7 @@ datatype ty = W
             | H
             | Aggr of Atom.atom
 
-datatype const = Int of int
+datatype const = Int of Int64.int
                | Flts of real
                | Fltd of real
 

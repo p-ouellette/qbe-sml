@@ -155,7 +155,7 @@ global=\$({kw}|{string});
 %%
 {ws}+     => (continue());
 \n        => (nextLine(); continue());
-{integer} => (T.INT(valOf(Int.fromString yytext),!lineNum,!lineNum));
+{integer} => (T.INT(valOf(Int64.fromString yytext),!lineNum,!lineNum));
 s_{real}  => (T.FLTS(float yytext,!lineNum,!lineNum));
 d_{real}  => (T.FLTD(float yytext,!lineNum,!lineNum));
 s_\-{inf} => (T.FLTS(Real.negInf,!lineNum,!lineNum));
