@@ -6,7 +6,10 @@ struct
 
   fun say out s = TextIO.output(out, s)
 
-  fun sayint out i = say out (Int.toString i)
+  val fixsign = String.map (fn #"~" => #"-" | c => c)
+
+  fun sayint out = (say out) o fixsign o Int.toString
+
   fun sayid s out id = (say out s; say out (Atom.toString id))
 
   val saytyp = sayid ":"
@@ -25,9 +28,9 @@ struct
   fun sayty out (T.Aggr name) = saytyp out name
     | sayty out ty = say out (tystr ty)
 
-  fun saycon out (T.Int i) = say out (Int64.toString i)
-    | saycon out (T.Flts f) = (say out "s_"; say out (Real.toString f))
-    | saycon out (T.Fltd f) = (say out "d_"; say out (Real.toString f))
+  fun saycon out (T.Int i) = say out (fixsign(Int64.toString i))
+    | saycon out (T.Flts f) = (say out "s_"; say out (fixsign(Real.toString f)))
+    | saycon out (T.Fltd f) = (say out "d_"; say out (fixsign(Real.toString f)))
 
   fun saylnk out {exported, section} =
         (if exported then say out "export " else ();
