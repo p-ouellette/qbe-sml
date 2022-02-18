@@ -30,8 +30,8 @@ structure T = QbeTypes
   | TMP of Atom.atom
   | LBL of Atom.atom
   | INT of Int64.int
-  | FLTS of real
-  | FLTD of real
+  | FLTS of Real64.real
+  | FLTD of Real64.real
   | STR of string
 
 %pos int

@@ -10,8 +10,8 @@ datatype ty = W
             | Aggr of Atom.atom
 
 datatype const = Int of Int64.int
-               | Flts of real
-               | Fltd of real
+               | Flts of Real64.real
+               | Fltd of Real64.real
 
 datatype value = Tmp of Atom.atom
                | Glo of Atom.atom
