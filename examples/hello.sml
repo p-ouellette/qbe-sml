@@ -16,15 +16,16 @@ val add =
               blocks = [start]}
 
 val stmts =
-  [T.Assign(id "r", T.W,
-            T.Call {name = id "add",
-                    envp = NONE,
-                    args = [(T.W, T.Con(T.Int 1)), (T.W, T.Con(T.Int 1))],
-                    vararg = NONE}),
-   T.Volatile(T.Call {name = id "printf",
-                      envp = NONE,
-                      args = [(T.L, T.Glo(id "fmt")), (T.W, T.Tmp(id "r"))],
-                      vararg = SOME 1})]
+  [T.Call {result = SOME(id "r", T.W),
+           name = id "add",
+           envp = NONE,
+           args = [(T.W, T.Con(T.Int 1)), (T.W, T.Con(T.Int 1))],
+           vararg = NONE},
+   T.Call {result = NONE,
+           name = id "printf",
+           envp = NONE,
+           args = [(T.L, T.Glo(id "fmt")), (T.W, T.Tmp(id "r"))],
+           vararg = SOME 1}]
 val start = {label = id "start",
              stmts = stmts,
              jump = SOME(T.Ret(SOME(T.Con(T.Int 0))))}

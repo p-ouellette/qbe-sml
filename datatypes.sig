@@ -9,20 +9,35 @@ datatype ty = W
             | H
             | Aggr of Atom.atom
 
+type typedef = {name: Atom.atom,
+                align: int option,
+                items: (ty * int) list}
+
+type darktypedef = {name: Atom.atom, align: int, size: int}
+
+type section = {name: string, flags: string option}
+
+type linkage = {exported: bool, section: section option}
+
 datatype const = Int of Int64.int
                | Flts of Real64.real
                | Fltd of Real64.real
 
+datatype dataitem = DataSym of Atom.atom * int
+                  | DataStr of string
+                  | DataCon of const
+
+datatype datafield = DataTy of ty * dataitem list
+                   | DataZ of int
+
+type datadef = {name: Atom.atom,
+                linkage: linkage,
+                align: int option,
+                fields: datafield list}
+
 datatype value = Tmp of Atom.atom
                | Glo of Atom.atom
                | Con of const
-
-type call = {name: Atom.atom,
-             envp: value option,
-             args: (ty * value) list,
-           (* index of first variadic argument in `args` or `length args` if a
-            * variadic function is called with no variadic arguments *)
-             vararg: int option}
 
 datatype instr = Add of value * value
                | Sub of value * value
@@ -38,12 +53,6 @@ datatype instr = Add of value * value
                | Sar of value * value
                | Shr of value * value
                | Shl of value * value
-               | Stored of value * value
-               | Stores of value * value
-               | Storel of value * value
-               | Storew of value * value
-               | Storeh of value * value
-               | Storeb of value * value
                | Loadd of value
                | Loads of value
                | Loadl of value
@@ -111,44 +120,36 @@ datatype instr = Add of value * value
                | Truncd of value
                | Cast of value
                | Copy of value
-               | Call of call
-               | Vastart of value
                | Vaarg of value
                | Phi of (Atom.atom * value) list
-               | Jmp of Atom.atom
-               | Jnz of value * Atom.atom * Atom.atom
-               | Ret of value option
-               | Retw of value option
-               | Nop
 
-type typedef = {name: Atom.atom,
-                align: int option,
-                items: (ty * int) list}
-
-type darktypedef = {name: Atom.atom, align: int, size: int}
-
-type section = {name: string, flags: string option}
-
-type linkage = {exported: bool, section: section option}
-
-datatype dataitem = DataSym of Atom.atom * int
-                  | DataStr of string
-                  | DataCon of const
-
-datatype datafield = DataTy of ty * dataitem list
-                   | DataZ of int
-
-type datadef = {name: Atom.atom,
-                linkage: linkage,
-                align: int option,
-                fields: datafield list}
+type call = {result: (Atom.atom * ty) option,
+             name: Atom.atom,
+             envp: value option,
+             args: (ty * value) list,
+           (* index of first variadic argument in `args` or `length args` if a
+            * variadic function is called with no variadic arguments *)
+             vararg: int option}
 
 datatype stmt = Assign of Atom.atom * ty * instr
-              | Volatile of instr
+              | Stored of value * value
+              | Stores of value * value
+              | Storel of value * value
+              | Storew of value * value
+              | Storeh of value * value
+              | Storeb of value * value
+              | Call of call
+              | Vastart of value
+              | Jmp of Atom.atom
+              | Jnz of value * Atom.atom * Atom.atom
+              | Ret of value option
+              (* internal operations *)
+              | Retw of value option
+              | Nop
 
 type block = {label: Atom.atom,
               stmts: stmt list,
-              jump: instr option}
+              jump: stmt option}
 
 type func = {name: Atom.atom,
              linkage: linkage,

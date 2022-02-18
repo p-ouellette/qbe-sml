@@ -44,12 +44,12 @@ struct
                     | SOME s => (say out "\""; say out s; say out "\" ");
                  say out "\n"))
 
+  fun sayassign out (name, ty) =
+        (saytmp out name; say out " ="; sayty out ty; say out " ")
+
   fun sayval out (T.Tmp name) = saytmp out name
     | sayval out (T.Glo name) = sayglo out name
     | sayval out (T.Con c) = saycon out c
-
-  fun sayret out s NONE = say out s
-    | sayret out s (SOME v) = (say out s; say out " "; sayval out v)
 
   val opinfo =
     fn T.Add(a, b) => ("add", [a, b])
@@ -66,12 +66,6 @@ struct
      | T.Sar(a, b) => ("sar", [a, b])
      | T.Shr(a, b) => ("shr", [a, b])
      | T.Shl(a, b) => ("shl", [a, b])
-     | T.Stored(a, b) => ("stored", [a, b])
-     | T.Stores(a, b) => ("stores", [a, b])
-     | T.Storel(a, b) => ("storel", [a, b])
-     | T.Storew(a, b) => ("storew", [a, b])
-     | T.Storeh(a, b) => ("storeh", [a, b])
-     | T.Storeb(a, b) => ("storeb", [a, b])
      | T.Loadd a => ("loadd", [a])
      | T.Loads a => ("loads", [a])
      | T.Loadl a => ("loadl", [a])
@@ -139,49 +133,62 @@ struct
      | T.Truncd a => ("truncd", [a])
      | T.Cast a => ("cast", [a])
      | T.Copy a => ("copy", [a])
-     | T.Vastart a => ("vastart", [a])
      | T.Vaarg a => ("vaarg", [a])
-     | _ => raise Fail "impossible"
+     | T.Phi a => raise Fail "impossible"
 
-  fun sayinstr out (T.Call {name, envp, args, vararg}) = let
-        val say = say out
-        fun sayarg ((ty, v), i) =
-              (case vararg
-                 of NONE => ()
-                  | SOME i' => if i' = i then say "..., " else ();
-               sayty out ty; say " "; sayval out v; say ", ";
-               i + 1)
-        in
-          say "call "; sayglo out name; say "(";
-          case envp
-            of NONE => ()
-             | SOME v => (say "env "; sayval out v; say ", ");
-          foldl sayarg 0 args;
-          case vararg
-            of NONE => ()
-             | SOME i => if i = length args then say "..." else ();
-          say ")"
-        end
-    | sayinstr out (T.Phi args) = let
+  fun sayinstr out (T.Phi args) = let
         val say = say out
         fun sayarg (lbl, v) = (saylbl out lbl; say " "; sayval out v; say ", ")
          in say "phi "; app sayarg args
         end
-    | sayinstr out (T.Jmp lbl) = (say out "jmp "; saylbl out lbl)
-    | sayinstr out (T.Jnz(v, l1, l2)) =
-        (say out "jnz "; sayval out v; say out ", "; saylbl out l1;
-         say out ", "; saylbl out l2)
-    | sayinstr out (T.Ret v) = sayret out "ret" v
-    | sayinstr out (T.Retw v) = sayret out "retw" v
-    | sayinstr out T.Nop = say out "nop"
-    | sayinstr out instr = let
-        val (name, vals) = opinfo instr
+    | sayinstr out ins = let
+        val (name, vals) = opinfo ins
         in
           say out name; say out " ";
           case vals
             of [v] => sayval out v
              | [v1, v2] => (sayval out v1; say out ", "; sayval out v2)
              | _ => raise Fail "impossible"
+        end
+
+  fun saycall out {result, name, envp, args, vararg} = let
+        val say = say out
+        fun sayarg ((ty, v), i) =
+              (Option.app (fn i' => if i' = i then say "..., " else ()) vararg;
+               sayty out ty; say " "; sayval out v; say ", ";
+               i + 1)
+        in
+          Option.app (sayassign out) result;
+          say "call "; sayglo out name; say "(";
+          Option.app (fn v => (say "env "; sayval out v; say ", ")) envp;
+          foldl sayarg 0 args;
+          Option.app
+            (fn i => if i = length args then say "..." else ()) vararg;
+          say ")"
+        end
+
+  fun saystmt out = let
+        val say = say out
+        fun saystore s (v1, v2) =
+              (say s; say " "; sayval out v1; say ", "; sayval out v2)
+        fun sayret s a = (say s; Option.app (fn v => (say " "; sayval out v)) a)
+        in
+          fn T.Assign(name, ty, ins) =>
+               (sayassign out (name, ty); sayinstr out ins)
+           | T.Stored a => saystore "stored" a
+           | T.Stores a => saystore "stores" a
+           | T.Storel a => saystore "storel" a
+           | T.Storew a => saystore "storew" a
+           | T.Storeh a => saystore "storeh" a
+           | T.Storeb a => saystore "storeb" a
+           | T.Call c => saycall out c
+           | T.Vastart v => (say "vastart "; sayval out v)
+           | T.Jmp lbl => (say "jmp "; saylbl out lbl)
+           | T.Jnz(v, l1, l2) => (say "jnz "; sayval out v; say ", ";
+                                  saylbl out l1; say ", "; saylbl out l2)
+           | T.Ret v => sayret "ret" v
+           | T.Retw v => sayret "retw" v
+           | T.Nop => say "nop"
         end
 
   fun printType (out, {name, align, items}) = let
@@ -192,9 +199,7 @@ struct
                say ", ")
         in
           say "type "; saytyp out name; say " =";
-          case align
-            of NONE => ()
-             | SOME i => (say " align "; sayint out i);
+          Option.app (fn i => (say " align "; sayint out i)) align;
           say " { "; app sayitem items; say "}\n"
         end
 
@@ -218,9 +223,7 @@ struct
           | sayfield (T.DataZ i) = (say "z "; sayint out i; say ", ")
         in
           saylnk out linkage; say "data "; sayglo out name; say " =";
-          case align
-            of NONE => ()
-             | SOME i => (say " align "; sayint out i);
+          Option.app (fn i => (say " align "; sayint out i)) align;
           say " { "; app sayfield fields; say "}\n"
         end
 
@@ -228,24 +231,15 @@ struct
         val say = say out
         fun sayparam (ty, name) =
               (sayty out ty; say " "; saytmp out name; say ", ")
-        fun saystmt (T.Assign(name, ty, ins)) =
-              (say "\t"; saytmp out name; say " ="; sayty out ty; say " ";
-               sayinstr out ins; say "\n")
-          | saystmt (T.Volatile ins) = (say "\t"; sayinstr out ins; say "\n")
+        fun sayline stmt = (say "\t"; saystmt out stmt; say "\n")
         fun sayblk {label, stmts, jump} =
-              (saylbl out label; say "\n"; app saystmt stmts;
-               case jump
-                 of NONE => ()
-                  | SOME j => saystmt (T.Volatile j))
+              (saylbl out label; say "\n"; app sayline stmts;
+               Option.app sayline jump)
         in
           saylnk out linkage; say "function ";
-          case result
-            of NONE => ()
-             | SOME ty => (sayty out ty; say " ");
+          Option.app (fn ty => (sayty out ty; say " ")) result;
           sayglo out name; say "(";
-          case envp
-            of NONE => ()
-             | SOME t => (say "env "; saytmp out t; say ", ");
+          Option.app (fn t => (say "env "; saytmp out t; say ", ")) envp;
           app sayparam params;
           if variadic then say "..." else ();
           say ") {\n"; app sayblk blocks; say "}\n"

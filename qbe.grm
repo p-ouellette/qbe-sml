@@ -77,12 +77,10 @@ structure T = QbeTypes
   | block of T.block
   | stmts of T.stmt list
   | stmt of T.stmt
-  | jump of T.instr
+  | jump of T.stmt
   | value of T.value
-  | ret of T.value option -> T.instr
-  | instr1v of T.instr
-  | instr2v of T.instr
-  | call of T.instr
+  | ret of T.value option -> T.stmt
+  | tmp_opt of (Atom.atom * T.ty) option
   | env_args of {envp: T.value option,
                  args: (T.ty * T.value) list,
                  vararg: int option}
@@ -90,8 +88,9 @@ structure T = QbeTypes
   | arg of (T.ty * T.value) option
   | phiargs of (Atom.atom * T.value) list
   | phiarg of Atom.atom * T.value
-  | instr1 of T.value -> T.instr
-  | instr2 of T.value * T.value -> T.instr
+  | ins1 of T.value -> T.instr
+  | ins2 of T.value * T.value -> T.instr
+  | store of T.value * T.value -> T.stmt
 
 %%
 
@@ -117,14 +116,14 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,item
                      result = typ_opt,
                      blocks = blocks})
 
-i32 : INT                                 (Int64.toInt INT)
-
 tylist :                                  ([])
        | ty_num                           ([ty_num])
        | ty_num COMMA tylist              (ty_num::tylist)
 
 ty_num : typ                              (typ, 1)
        | typ i32                          (typ, i32)
+
+i32 : INT                                 (Int64.toInt INT)
 
 typ : W                                   (T.W)
     | L                                   (T.L)
@@ -195,14 +194,20 @@ block : LBL stmts                         ({label=LBL, stmts=stmts, jump=NONE})
 stmts :                                   ([])
       | stmt stmts                        (stmt::stmts)
 
-stmt : instr1v                            (T.Volatile instr1v)
-     | instr2v                            (T.Volatile instr2v)
-     | call                               (T.Volatile call)
-     | TMP EQ typ instr1v                 (T.Assign(TMP, typ, instr1v))
-     | TMP EQ typ instr2v                 (T.Assign(TMP, typ, instr2v))
-     | TMP EQ typ call                    (T.Assign(TMP, typ, call))
-     | TMP EQ typ PHI phiargs             (T.Volatile(T.Phi phiargs))
-     | NOP                                (T.Volatile T.Nop)
+stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
+     | TMP EQ typ ins2 value COMMA value  (T.Assign(TMP, typ, ins2(value1, value2)))
+     | TMP EQ typ PHI phiargs             (T.Assign(TMP, typ, T.Phi phiargs))
+     | store value COMMA value            (store(value1, value2))
+     | tmp_opt CALL GLO LPAREN env_args RPAREN
+(
+  T.Call {result = tmp_opt,
+          name = GLO,
+          envp = #envp env_args,
+          args = #args env_args,
+          vararg = #vararg env_args}
+)
+     | VASTART value                      (T.Vastart value)
+     | NOP                                (T.Nop)
 
 jump : JMP LBL                            (T.Jmp LBL)
      | JNZ value COMMA LBL COMMA LBL      (T.Jnz(value, LBL1, LBL2))
@@ -216,14 +221,8 @@ value : TMP                               (T.Tmp TMP)
 ret : RET                                 (T.Ret)
     | RETW                                (T.Retw)
 
-instr1v : instr1 value                    (instr1 value)
-
-instr2v : instr2 value COMMA value        (instr2(value1, value2))
-
-call : CALL GLO LPAREN env_args RPAREN    (T.Call {name = GLO,
-                                                   envp = #envp env_args,
-                                                   args = #args env_args,
-                                                   vararg = #vararg env_args})
+tmp_opt :                                 (NONE)
+        | TMP EQ typ                      (SOME(TMP, typ))
 
 env_args : args
 (
@@ -264,93 +263,93 @@ phiargs : phiarg                          ([phiarg])
 
 phiarg : LBL value                        ((LBL, value))
 
-instr1 : NEG                              (T.Neg)
-       | LOADD                            (T.Loadd)
-       | LOADS                            (T.Loads)
-       | LOADL                            (T.Loadl)
-       | LOADW                            (T.Loadw)
-       | LOADSW                           (T.Loadsw)
-       | LOADUW                           (T.Loaduw)
-       | LOADSH                           (T.Loadsh)
-       | LOADUH                           (T.Loaduh)
-       | LOADSB                           (T.Loadsb)
-       | LOADUB                           (T.Loadub)
-       | ALLOC4                           (T.Alloc4)
-       | ALLOC8                           (T.Alloc8)
-       | ALLOC16                          (T.Alloc16)
-       | DTOSI                            (T.Dtosi)
-       | DTOUI                            (T.Dtoui)
-       | EXTS                             (T.Exts)
-       | EXTSB                            (T.Extsb)
-       | EXTSH                            (T.Extsh)
-       | EXTSW                            (T.Extsw)
-       | EXTUB                            (T.Extub)
-       | EXTUH                            (T.Extuh)
-       | EXTUW                            (T.Extuw)
-       | SLTOF                            (T.Sltof)
-       | ULTOF                            (T.Ultof)
-       | STOSI                            (T.Stosi)
-       | STOUI                            (T.Stoui)
-       | SWTOF                            (T.Swtof)
-       | UWTOF                            (T.Uwtof)
-       | TRUNCD                           (T.Truncd)
-       | CAST                             (T.Cast)
-       | COPY                             (T.Copy)
-       | VASTART                          (T.Vastart)
-       | VAARG                            (T.Vaarg)
+ins1 : NEG                                (T.Neg)
+     | LOADD                              (T.Loadd)
+     | LOADS                              (T.Loads)
+     | LOADL                              (T.Loadl)
+     | LOADW                              (T.Loadw)
+     | LOADSW                             (T.Loadsw)
+     | LOADUW                             (T.Loaduw)
+     | LOADSH                             (T.Loadsh)
+     | LOADUH                             (T.Loaduh)
+     | LOADSB                             (T.Loadsb)
+     | LOADUB                             (T.Loadub)
+     | ALLOC4                             (T.Alloc4)
+     | ALLOC8                             (T.Alloc8)
+     | ALLOC16                            (T.Alloc16)
+     | DTOSI                              (T.Dtosi)
+     | DTOUI                              (T.Dtoui)
+     | EXTS                               (T.Exts)
+     | EXTSB                              (T.Extsb)
+     | EXTSH                              (T.Extsh)
+     | EXTSW                              (T.Extsw)
+     | EXTUB                              (T.Extub)
+     | EXTUH                              (T.Extuh)
+     | EXTUW                              (T.Extuw)
+     | SLTOF                              (T.Sltof)
+     | ULTOF                              (T.Ultof)
+     | STOSI                              (T.Stosi)
+     | STOUI                              (T.Stoui)
+     | SWTOF                              (T.Swtof)
+     | UWTOF                              (T.Uwtof)
+     | TRUNCD                             (T.Truncd)
+     | CAST                               (T.Cast)
+     | COPY                               (T.Copy)
+     | VAARG                              (T.Vaarg)
 
-instr2 : ADD                              (T.Add)
-       | SUB                              (T.Sub)
-       | DIV                              (T.Div)
-       | MUL                              (T.Mul)
-       | UDIV                             (T.Udiv)
-       | REM                              (T.Rem)
-       | UREM                             (T.Urem)
-       | OR                               (T.Or)
-       | XOR                              (T.Xor)
-       | AND                              (T.And)
-       | SAR                              (T.Sar)
-       | SHR                              (T.Shr)
-       | SHL                              (T.Shl)
-       | STORED                           (T.Stored)
-       | STORES                           (T.Stores)
-       | STOREL                           (T.Storel)
-       | STOREW                           (T.Storew)
-       | STOREH                           (T.Storeh)
-       | STOREB                           (T.Storeb)
-       | CEQD                             (T.Ceqd)
-       | CEQL                             (T.Ceql)
-       | CEQS                             (T.Ceqs)
-       | CEQW                             (T.Ceqw)
-       | CGED                             (T.Cged)
-       | CGES                             (T.Cges)
-       | CGTD                             (T.Cgtd)
-       | CGTS                             (T.Cgts)
-       | CLED                             (T.Cled)
-       | CLES                             (T.Cles)
-       | CLTD                             (T.Cltd)
-       | CLTS                             (T.Clts)
-       | CNED                             (T.Cned)
-       | CNEL                             (T.Cnel)
-       | CNES                             (T.Cnes)
-       | CNEW                             (T.Cnew)
-       | COD                              (T.Cod)
-       | COS                              (T.Cos)
-       | CSGEL                            (T.Csgel)
-       | CSGEW                            (T.Csgew)
-       | CSGTL                            (T.Csgtl)
-       | CSGTW                            (T.Csgtw)
-       | CSLEL                            (T.Cslel)
-       | CSLEW                            (T.Cslew)
-       | CSLTL                            (T.Csltl)
-       | CSLTW                            (T.Csltw)
-       | CUGEL                            (T.Cugel)
-       | CUGEW                            (T.Cugew)
-       | CUGTL                            (T.Cugtl)
-       | CUGTW                            (T.Cugtw)
-       | CULEL                            (T.Culel)
-       | CULEW                            (T.Culew)
-       | CULTL                            (T.Cultl)
-       | CULTW                            (T.Cultw)
-       | CUOD                             (T.Cuod)
-       | CUOS                             (T.Cuos)
+ins2 : ADD                                (T.Add)
+     | SUB                                (T.Sub)
+     | DIV                                (T.Div)
+     | MUL                                (T.Mul)
+     | UDIV                               (T.Udiv)
+     | REM                                (T.Rem)
+     | UREM                               (T.Urem)
+     | OR                                 (T.Or)
+     | XOR                                (T.Xor)
+     | AND                                (T.And)
+     | SAR                                (T.Sar)
+     | SHR                                (T.Shr)
+     | SHL                                (T.Shl)
+     | CEQD                               (T.Ceqd)
+     | CEQL                               (T.Ceql)
+     | CEQS                               (T.Ceqs)
+     | CEQW                               (T.Ceqw)
+     | CGED                               (T.Cged)
+     | CGES                               (T.Cges)
+     | CGTD                               (T.Cgtd)
+     | CGTS                               (T.Cgts)
+     | CLED                               (T.Cled)
+     | CLES                               (T.Cles)
+     | CLTD                               (T.Cltd)
+     | CLTS                               (T.Clts)
+     | CNED                               (T.Cned)
+     | CNEL                               (T.Cnel)
+     | CNES                               (T.Cnes)
+     | CNEW                               (T.Cnew)
+     | COD                                (T.Cod)
+     | COS                                (T.Cos)
+     | CSGEL                              (T.Csgel)
+     | CSGEW                              (T.Csgew)
+     | CSGTL                              (T.Csgtl)
+     | CSGTW                              (T.Csgtw)
+     | CSLEL                              (T.Cslel)
+     | CSLEW                              (T.Cslew)
+     | CSLTL                              (T.Csltl)
+     | CSLTW                              (T.Csltw)
+     | CUGEL                              (T.Cugel)
+     | CUGEW                              (T.Cugew)
+     | CUGTL                              (T.Cugtl)
+     | CUGTW                              (T.Cugtw)
+     | CULEL                              (T.Culel)
+     | CULEW                              (T.Culew)
+     | CULTL                              (T.Cultl)
+     | CULTW                              (T.Cultw)
+     | CUOD                               (T.Cuod)
+     | CUOS                               (T.Cuos)
+
+store : STORED                            (T.Stored)
+      | STORES                            (T.Stores)
+      | STOREL                            (T.Storel)
+      | STOREW                            (T.Storew)
+      | STOREH                            (T.Storeh)
+      | STOREB                            (T.Storeb)
