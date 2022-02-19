@@ -33,19 +33,18 @@ struct
     | saycon out (T.Flts r) = (say out "s_"; sayr64 out r)
     | saycon out (T.Fltd r) = (say out "d_"; sayr64 out r)
 
-  fun saylnk out {exported, section} =
-        (if exported then say out "export " else ();
-         case section
-           of NONE => ()
-            | SOME {name, flags} =>
-                (say out "section \""; say out name; say out "\" ";
-                 case flags
-                   of NONE => ()
-                    | SOME s => (say out "\""; say out s; say out "\" ");
-                 say out "\n"))
+  fun saylnk out {exported, section} = let
+        val say = say out
+        fun saystr s = (say "\""; say s; say "\"")
+        fun saysec {name, flags} =
+              (say "section "; saystr name; say " ";
+               Option.app saystr flags; say "\n")
+         in if exported then say "export " else ();
+            Option.app saysec section
+        end
 
-  fun sayassign out (name, ty) =
-        (saytmp out name; say out " ="; sayty out ty; say out " ")
+  fun sayassign out (tmp, ty) =
+        (saytmp out tmp; say out " ="; sayty out ty; say out " ")
 
   fun sayval out (T.Tmp name) = saytmp out name
     | sayval out (T.Glo name) = sayglo out name
@@ -134,14 +133,8 @@ struct
      | T.Cast a => ("cast", [a])
      | T.Copy a => ("copy", [a])
      | T.Vaarg a => ("vaarg", [a])
-     | T.Phi a => raise Fail "impossible"
 
-  fun sayinstr out (T.Phi args) = let
-        val say = say out
-        fun sayarg (lbl, v) = (saylbl out lbl; say " "; sayval out v; say ", ")
-         in say "phi "; app sayarg args
-        end
-    | sayinstr out ins = let
+  fun sayinstr out ins = let
         val (name, vals) = opinfo ins
         in
           say out name; say out " ";
@@ -162,8 +155,7 @@ struct
           say "call "; sayglo out name; say "(";
           Option.app (fn v => (say "env "; sayval out v; say ", ")) envp;
           foldl sayarg 0 args;
-          Option.app
-            (fn i => if i = length args then say "..." else ()) vararg;
+          Option.app (fn i => if i = length args then say "..." else ()) vararg;
           say ")"
         end
 
@@ -231,9 +223,16 @@ struct
         val say = say out
         fun sayparam (ty, name) =
               (sayty out ty; say " "; saytmp out name; say ", ")
+        fun sayphiarg (lbl, v) =
+              (saylbl out lbl; say " "; sayval out v; say ", ")
+        fun sayphi {temp, args} =
+              (say "\t"; sayassign out temp; say "phi "; app sayphiarg args;
+               say "\n")
         fun sayline stmt = (say "\t"; saystmt out stmt; say "\n")
-        fun sayblk {label, stmts, jump} =
-              (saylbl out label; say "\n"; app sayline stmts;
+        fun sayblk {label, phis, stmts, jump} =
+              (saylbl out label; say "\n";
+               app sayphi phis;
+               app sayline stmts;
                Option.app sayline jump)
         in
           saylnk out linkage; say "function ";

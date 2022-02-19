@@ -75,9 +75,13 @@ structure T = QbeTypes
   | param of T.ty * Atom.atom
   | blocks of T.block list
   | block of T.block
+  | phis_stmts of T.phi list * T.stmt list
+  | phi of T.phi
+  | phiargs of (Atom.atom * T.value) list
+  | phiarg of Atom.atom * T.value
   | stmts of T.stmt list
   | stmt of T.stmt
-  | jump of T.stmt
+  | jump of T.stmt option
   | value of T.value
   | ret of T.value option -> T.stmt
   | tmp_opt of (Atom.atom * T.ty) option
@@ -86,8 +90,6 @@ structure T = QbeTypes
                  vararg: int option}
   | args of {args: (T.ty * T.value) list, vararg: int option, i: int}
   | arg of (T.ty * T.value) option
-  | phiargs of (Atom.atom * T.value) list
-  | phiarg of Atom.atom * T.value
   | ins1 of T.value -> T.instr
   | ins2 of T.value * T.value -> T.instr
   | store of T.value * T.value -> T.stmt
@@ -188,15 +190,24 @@ param : typ TMP                           ((typ, TMP))
 blocks : block                            ([block])
        | block blocks                     (block::blocks)
 
-block : LBL stmts                         ({label=LBL, stmts=stmts, jump=NONE})
-      | LBL stmts jump                    ({label=LBL, stmts=stmts, jump=SOME jump})
+block : LBL phis_stmts jump               ({label=LBL, phis=(#1 phis_stmts),
+                                            stmts=(#2 phis_stmts), jump=jump})
+
+phis_stmts : phi phis_stmts               (phi::(#1 phis_stmts), #2 phis_stmts)
+           | stmts                        ([], stmts)
+
+phi : TMP EQ typ PHI phiargs              ({temp=(TMP, typ), args=phiargs})
+
+phiargs : phiarg                          ([phiarg])
+        | phiarg COMMA phiargs            (phiarg::phiargs)
+
+phiarg : LBL value                        ((LBL, value))
 
 stmts :                                   ([])
       | stmt stmts                        (stmt::stmts)
 
 stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
      | TMP EQ typ ins2 value COMMA value  (T.Assign(TMP, typ, ins2(value1, value2)))
-     | TMP EQ typ PHI phiargs             (T.Assign(TMP, typ, T.Phi phiargs))
      | store value COMMA value            (store(value1, value2))
      | tmp_opt CALL GLO LPAREN env_args RPAREN
 (
@@ -209,10 +220,11 @@ stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
      | VASTART value                      (T.Vastart value)
      | NOP                                (T.Nop)
 
-jump : JMP LBL                            (T.Jmp LBL)
-     | JNZ value COMMA LBL COMMA LBL      (T.Jnz(value, LBL1, LBL2))
-     | ret                                (ret NONE)
-     | ret value                          (ret(SOME value))
+jump :                                    (NONE)
+     | JMP LBL                            (SOME(T.Jmp LBL))
+     | JNZ value COMMA LBL COMMA LBL      (SOME(T.Jnz(value, LBL1, LBL2)))
+     | ret                                (SOME(ret NONE))
+     | ret value                          (SOME(ret(SOME value)))
 
 value : TMP                               (T.Tmp TMP)
       | GLO                               (T.Glo GLO)
@@ -257,11 +269,6 @@ args :                                    ({args=[], vararg=NONE, i= ~1})
 
 arg : typ value                           (SOME(typ, value))
     | DOTS                                (NONE) (* variadic marker *)
-
-phiargs : phiarg                          ([phiarg])
-        | phiarg COMMA phiargs            (phiarg::phiargs)
-
-phiarg : LBL value                        ((LBL, value))
 
 ins1 : NEG                                (T.Neg)
      | LOADD                              (T.Loadd)

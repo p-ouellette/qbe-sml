@@ -4,6 +4,7 @@ val id = Atom.atom
 val stmts =
   [T.Assign(id "c", T.W, T.Add(T.Tmp(id "a"), T.Tmp(id "b")))]
 val start = {label = id "start",
+             phis = []: T.phi list,
              stmts = stmts,
              jump = SOME(T.Ret(SOME(T.Tmp(id "c"))))}
 val add =
@@ -27,8 +28,10 @@ val stmts =
            args = [(T.L, T.Glo(id "fmt")), (T.W, T.Tmp(id "r"))],
            vararg = SOME 1}]
 val start = {label = id "start",
+             phis = []: T.phi list,
              stmts = stmts,
              jump = SOME(T.Ret(SOME(T.Con(T.Int 0))))}
+
 val main =
   T.Function {name = id "main",
               linkage = {exported=true, section=NONE},

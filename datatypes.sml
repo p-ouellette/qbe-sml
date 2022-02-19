@@ -39,6 +39,9 @@ datatype value = Tmp of Atom.atom
                | Glo of Atom.atom
                | Con of const
 
+type phi = {temp: (Atom.atom * ty),
+            args: (Atom.atom * value) list}
+
 datatype instr = Add of value * value
                | Sub of value * value
                | Div of value * value
@@ -121,7 +124,6 @@ datatype instr = Add of value * value
                | Cast of value
                | Copy of value
                | Vaarg of value
-               | Phi of (Atom.atom * value) list
 
 type call = {result: (Atom.atom * ty) option,
              name: Atom.atom,
@@ -145,6 +147,7 @@ datatype stmt = Assign of Atom.atom * ty * instr
               | Nop
 
 type block = {label: Atom.atom,
+              phis: phi list,
               stmts: stmt list,
               jump: stmt option}
 
