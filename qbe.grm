@@ -81,9 +81,9 @@ structure T = QbeTypes
   | phiarg of Atom.atom * T.value
   | stmts of T.stmt list
   | stmt of T.stmt
-  | jump of T.stmt option
+  | jump of T.jump option
   | value of T.value
-  | ret of T.value option -> T.stmt
+  | ret of T.value option -> T.jump
   | tmp_opt of (Atom.atom * T.ty) option
   | env_args of {envp: T.value option,
                  args: (T.ty * T.value) list,

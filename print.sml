@@ -163,7 +163,6 @@ struct
         val say = say out
         fun saystore s (v1, v2) =
               (say s; say " "; sayval out v1; say ", "; sayval out v2)
-        fun sayret s a = (say s; Option.app (fn v => (say " "; sayval out v)) a)
         in
           fn T.Assign(name, ty, ins) =>
                (sayassign out (name, ty); sayinstr out ins)
@@ -175,12 +174,18 @@ struct
            | T.Storeb a => saystore "storeb" a
            | T.Call c => saycall out c
            | T.Vastart v => (say "vastart "; sayval out v)
-           | T.Jmp lbl => (say "jmp "; saylbl out lbl)
+           | T.Nop => say "nop"
+        end
+
+  fun sayjmp out = let
+        val say = say out
+        fun sayret s a = (say s; Option.app (fn v => (say " "; sayval out v)) a)
+        in
+          fn T.Jmp lbl => (say "jmp "; saylbl out lbl)
            | T.Jnz(v, l1, l2) => (say "jnz "; sayval out v; say ", ";
                                   saylbl out l1; say ", "; saylbl out l2)
            | T.Ret v => sayret "ret" v
            | T.Retw v => sayret "retw" v
-           | T.Nop => say "nop"
         end
 
   fun printType (out, {name, align, items}) = let
@@ -228,12 +233,11 @@ struct
         fun sayphi {temp, args} =
               (say "\t"; sayassign out temp; say "phi "; app sayphiarg args;
                say "\n")
-        fun sayline stmt = (say "\t"; saystmt out stmt; say "\n")
         fun sayblk {label, phis, stmts, jump} =
               (saylbl out label; say "\n";
                app sayphi phis;
-               app sayline stmts;
-               Option.app sayline jump)
+               app (fn s => (say "\t"; saystmt out s; say "\n")) stmts;
+               Option.app (fn j => (say "\t"; sayjmp out j; say "\n")) jump)
         in
           saylnk out linkage; say "function ";
           Option.app (fn ty => (sayty out ty; say " ")) result;

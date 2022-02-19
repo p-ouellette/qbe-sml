@@ -142,17 +142,19 @@ datatype stmt = Assign of Atom.atom * ty * instr
               | Storeb of value * value
               | Call of call
               | Vastart of value
-              | Jmp of Atom.atom
+              (* internal operations *)
+              | Nop
+
+datatype jump = Jmp of Atom.atom
               | Jnz of value * Atom.atom * Atom.atom
               | Ret of value option
               (* internal operations *)
               | Retw of value option
-              | Nop
 
 type block = {label: Atom.atom,
               phis: phi list,
               stmts: stmt list,
-              jump: stmt option}
+              jump: jump option}
 
 type func = {name: Atom.atom,
              linkage: linkage,
