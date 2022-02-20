@@ -9,6 +9,8 @@ datatype ty = W
             | H
             | Aggr of Atom.atom
 
+val sameTy : ty * ty -> bool
+
 type typedef = {name: Atom.atom,
                 align: int option,
                 items: (ty * int) list}

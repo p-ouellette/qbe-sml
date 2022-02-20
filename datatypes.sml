@@ -9,6 +9,15 @@ datatype ty = W
             | H
             | Aggr of Atom.atom
 
+fun sameTy (W, W) = true
+  | sameTy (L, L) = true
+  | sameTy (S, S) = true
+  | sameTy (D, D) = true
+  | sameTy (B, B) = true
+  | sameTy (H, H) = true
+  | sameTy (Aggr a, Aggr b) = Atom.same(a, b)
+  | sameTy _ = false
+
 type typedef = {name: Atom.atom,
                 align: int option,
                 items: (ty * int) list}
