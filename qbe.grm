@@ -30,7 +30,7 @@ structure T = QbeTypes
   | TMP of Atom.atom
   | LBL of Atom.atom
   | INT of Int64.int
-  | FLTS of Real64.real
+  | FLTS of Real32.real
   | FLTD of Real64.real
   | STR of string
 

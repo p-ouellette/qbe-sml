@@ -9,6 +9,7 @@ Library
   structure QbeGen
   structure QbeParse
   structure QbePrint
+  structure Real32
 
 is
 
@@ -27,3 +28,4 @@ is
   print.sml
   qbe.grm
   qbe.lex
+  smlnj-real32.sml

@@ -9,6 +9,7 @@ struct
   val fixsign = String.map (fn #"~" => #"-" | c => c)
 
   fun sayint out = (say out) o fixsign o Int.toString
+  fun sayr32 out = (say out) o fixsign o Real32.toString
   fun sayr64 out = (say out) o fixsign o Real64.toString
 
   fun sayid s out id = (say out s; say out (Atom.toString id))
@@ -30,7 +31,7 @@ struct
     | sayty out ty = say out (tystr ty)
 
   fun saycon out (T.Int i) = say out (fixsign(Int64.toString i))
-    | saycon out (T.Flts r) = (say out "s_"; sayr64 out r)
+    | saycon out (T.Flts r) = (say out "s_"; sayr32 out r)
     | saycon out (T.Fltd r) = (say out "d_"; sayr64 out r)
 
   fun saylnk out {exported, section} = let

@@ -29,7 +29,7 @@ type section = {name: string, flags: string option}
 type linkage = {exported: bool, section: section option}
 
 datatype const = Int of Int64.int
-               | Flts of Real64.real
+               | Flts of Real32.real
                | Fltd of Real64.real
 
 datatype dataitem = DataSym of Atom.atom * int
