@@ -8,13 +8,14 @@ struct
                              structure ParserData = QbeLrVals.ParserData
                              structure Lex = QbeLex)
 
-  fun parse fname = let
-        val _ = Interface.init fname
-        val file = TextIO.openIn fname
-        val stream = QbeParser.makeLexer(fn i => TextIO.inputN(file, i))
-        val (defs, _) = QbeParser.parse(30, stream, Interface.error, ())
-         in TextIO.closeIn file;
-            defs
+  exception Error
+
+  fun parse (stream, name) = let
+        val _ = Interface.init name
+        val lexer = QbeParser.makeLexer(fn i => TextIO.inputN(stream, i))
+        val (defs, _) = QbeParser.parse(15, lexer, Interface.error, ())
+            handle QbeParser.ParseError => raise Error
+         in defs
         end
 
   fun anyErrors () = !Interface.anyErrors

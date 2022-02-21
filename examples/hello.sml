@@ -54,5 +54,7 @@ val _ = QbeGen.addDef(m, main)
 val _ = QbeGen.addDef(m, fmt)
 val _ = QbePrint.printModule(TextIO.stdOut, m)
 
-val defs = QbeParse.parse "hello.ssa"
+val strm = TextIO.openIn "hello.ssa"
+val defs = QbeParse.parse(strm, "hello.ssa")
+val _ = TextIO.closeIn strm
 val _ = QbePrint.printDefs(TextIO.stdOut, defs)
