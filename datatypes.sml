@@ -7,7 +7,7 @@ datatype ty = W
             | D
             | B
             | H
-            | Aggr of Atom.atom
+            | Agg of Atom.atom
 
 fun sameTy (W, W) = true
   | sameTy (L, L) = true
@@ -15,7 +15,7 @@ fun sameTy (W, W) = true
   | sameTy (D, D) = true
   | sameTy (B, B) = true
   | sameTy (H, H) = true
-  | sameTy (Aggr a, Aggr b) = Atom.same(a, b)
+  | sameTy (Agg a, Agg b) = Atom.same(a, b)
   | sameTy _ = false
 
 type typedef = {name: Atom.atom,
@@ -154,7 +154,6 @@ datatype stmt = Assign of Atom.atom * ty * instr
 datatype jump = Jmp of Atom.atom
               | Jnz of value * Atom.atom * Atom.atom
               | Ret of value option
-              | Retw of value option
 
 type block = {label: Atom.atom,
               phis: phi list,

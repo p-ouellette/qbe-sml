@@ -7,7 +7,7 @@ datatype ty = W
             | D
             | B
             | H
-            | Aggr of Atom.atom
+            | Agg of Atom.atom
 
 val sameTy : ty * ty -> bool
 
@@ -150,8 +150,6 @@ datatype stmt = Assign of Atom.atom * ty * instr
 datatype jump = Jmp of Atom.atom
               | Jnz of value * Atom.atom * Atom.atom
               | Ret of value option
-              (* internal operations *)
-              | Retw of value option
 
 type block = {label: Atom.atom,
               phis: phi list,

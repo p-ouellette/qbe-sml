@@ -21,7 +21,7 @@ structure T = QbeTypes
   | CALL
   | VASTART | VAARG
   | PHI
-  | JMP | JNZ | RET | RETW
+  | JMP | JNZ | RET | RET0 | RETW | RETL | RETS | RETD
   | NOP
   | W | L | S | D | B | H | Z
   | PLUS | EQ | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | ENV | DOTS
@@ -73,17 +73,17 @@ structure T = QbeTypes
                    variadic: bool}
   | params of {params: (T.ty * Atom.atom) list, variadic: bool}
   | param of T.ty * Atom.atom
-  | blocks of T.block list
-  | block of T.block
+  | blocks of T.block list * T.ty option
+  | block of T.block * T.ty option
   | phis_stmts of T.phi list * T.stmt list
   | phi of T.phi
   | phiargs of (Atom.atom * T.value) list
   | phiarg of Atom.atom * T.value
   | stmts of T.stmt list
   | stmt of T.stmt
-  | jump of T.jump option
+  | jump of T.jump option * T.ty option
   | value of T.value
-  | ret of T.value option -> T.jump
+  | retty of T.ty
   | tmp_opt of (Atom.atom * T.ty) option
   | env_args of {envp: T.value option,
                  args: (T.ty * T.value) list,
@@ -115,8 +115,8 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,item
                      params = #params env_params,
                      envp = #envp env_params,
                      variadic = #variadic env_params,
-                     result = typ_opt,
-                     blocks = blocks})
+                     result = if isSome(#2 blocks) then #2 blocks else typ_opt,
+                     blocks = #1 blocks})
 
 tylist :                                  ([])
        | ty_num                           ([ty_num])
@@ -133,7 +133,7 @@ typ : W                                   (T.W)
     | D                                   (T.D)
     | B                                   (T.B)
     | H                                   (T.H)
-    | TYP                                 (T.Aggr TYP)
+    | TYP                                 (T.Agg TYP)
 
 linkage :                                 ({exported=false, section=NONE})
         | EXPORT                          ({exported=true, section=NONE})
@@ -187,11 +187,13 @@ params :                                  ({params=[], variadic=false})
 
 param : typ TMP                           ((typ, TMP))
 
-blocks : block                            ([block])
-       | block blocks                     (block::blocks)
+blocks : block                            (([#1 block], #2 block))
+       | block blocks                     ((#1 block::(#1 blocks), #2 blocks))
 
-block : LBL phis_stmts jump               ({label=LBL, phis=(#1 phis_stmts),
-                                            stmts=(#2 phis_stmts), jump=jump})
+block : LBL phis_stmts jump               (({label = LBL,
+                                             phis = #1 phis_stmts,
+                                             stmts = #2 phis_stmts,
+                                             jump = #1 jump}, #2 jump))
 
 phis_stmts : phi phis_stmts               (phi::(#1 phis_stmts), #2 phis_stmts)
            | stmts                        ([], stmts)
@@ -220,18 +222,22 @@ stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
      | VASTART value                      (T.Vastart value)
      | NOP                                (T.Nop)
 
-jump :                                    (NONE)
-     | JMP LBL                            (SOME(T.Jmp LBL))
-     | JNZ value COMMA LBL COMMA LBL      (SOME(T.Jnz(value, LBL1, LBL2)))
-     | ret                                (SOME(ret NONE))
-     | ret value                          (SOME(ret(SOME value)))
+jump :                                    ((NONE, NONE))
+     | JMP LBL                            ((SOME(T.Jmp LBL), NONE))
+     | JNZ value COMMA LBL COMMA LBL      ((SOME(T.Jnz(value, LBL1, LBL2)), NONE))
+     | RET                                ((SOME(T.Ret NONE), NONE))
+     | RET0                               ((SOME(T.Ret NONE), NONE))
+     | RET value                          ((SOME(T.Ret(SOME value)), NONE))
+     | retty value                        ((SOME(T.Ret(SOME value)), SOME retty))
 
 value : TMP                               (T.Tmp TMP)
       | GLO                               (T.Glo GLO)
       | const                             (T.Con const)
 
-ret : RET                                 (T.Ret)
-    | RETW                                (T.Retw)
+retty : RETW                              (T.W)
+      | RETL                              (T.L)
+      | RETS                              (T.S)
+      | RETD                              (T.D)
 
 tmp_opt :                                 (NONE)
         | TMP EQ typ                      (SOME(TMP, typ))

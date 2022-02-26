@@ -25,9 +25,9 @@ struct
     | tystr T.D = "d"
     | tystr T.B = "b"
     | tystr T.H = "h"
-    | tystr (T.Aggr _) = raise Fail "impossible"
+    | tystr (T.Agg _) = raise Fail "impossible"
 
-  fun sayty out (T.Aggr name) = saytyp out name
+  fun sayty out (T.Agg name) = saytyp out name
     | sayty out ty = say out (tystr ty)
 
   fun saycon out (T.Int i) = say out (fixsign(Int64.toString i))
@@ -180,13 +180,12 @@ struct
 
   fun sayjmp out = let
         val say = say out
-        fun sayret s a = (say s; Option.app (fn v => (say " "; sayval out v)) a)
         in
           fn T.Jmp lbl => (say "jmp "; saylbl out lbl)
            | T.Jnz(v, l1, l2) => (say "jnz "; sayval out v; say ", ";
                                   saylbl out l1; say ", "; saylbl out l2)
-           | T.Ret v => sayret "ret" v
-           | T.Retw v => sayret "retw" v
+           | T.Ret a =>
+               (say "ret"; Option.app (fn v => (say " "; sayval out v)) a)
         end
 
   fun printType (out, {name, align, items}) = let
