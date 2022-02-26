@@ -144,8 +144,6 @@ datatype stmt = Assign of Atom.atom * ty * instr
               | Storeb of value * value
               | Call of call
               | Vastart of value
-              (* internal operations *)
-              | Nop
 
 datatype jump = Jmp of Atom.atom
               | Jnz of value * Atom.atom * Atom.atom

@@ -206,6 +206,7 @@ phiargs : phiarg                          ([phiarg])
 phiarg : LBL value                        ((LBL, value))
 
 stmts :                                   ([])
+      | NOP stmts                         (stmts)
       | stmt stmts                        (stmt::stmts)
 
 stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
@@ -220,7 +221,6 @@ stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
           vararg = #vararg env_args}
 )
      | VASTART value                      (T.Vastart value)
-     | NOP                                (T.Nop)
 
 jump :                                    ((NONE, NONE))
      | JMP LBL                            ((SOME(T.Jmp LBL), NONE))

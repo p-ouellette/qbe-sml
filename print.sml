@@ -175,7 +175,6 @@ struct
            | T.Storeb a => saystore "storeb" a
            | T.Call c => saycall out c
            | T.Vastart v => (say "vastart "; sayval out v)
-           | T.Nop => say "nop"
         end
 
   fun sayjmp out = let
