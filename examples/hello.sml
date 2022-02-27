@@ -10,8 +10,8 @@ val start = {label = id "start",
 val add =
   T.Function {name = id "add",
               linkage = {exported=false, section=NONE},
-              params = [(T.W, id "a"), (T.W, id "b")],
               envp = NONE,
+              params = [(T.W, id "a"), (T.W, id "b")],
               variadic = false,
               result = SOME T.W,
               blocks = [start]}
@@ -35,8 +35,8 @@ val start = {label = id "start",
 val main =
   T.Function {name = id "main",
               linkage = {exported=true, section=NONE},
-              params = [],
               envp = NONE,
+              params = [],
               variadic = false,
               result = SOME T.W,
               blocks = [start]}

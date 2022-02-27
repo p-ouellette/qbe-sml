@@ -1,5 +1,13 @@
 structure T = QbeTypes
 
+datatype par = Par of T.ty * Atom.atom
+             | Pare of Atom.atom
+             | Parc of Atom.atom * Atom.atom
+
+datatype arg' = Arg of T.ty * T.value
+              | Arge of T.value
+              | Argv
+
 %%
 %name Qbe
 %term
@@ -21,8 +29,8 @@ structure T = QbeTypes
   | CALL
   | VASTART | VAARG
   | PHI
-  | JMP | JNZ | RET | RET0 | RETW | RETL | RETS | RETD
-  | NOP
+  | JMP | JNZ | RET | RET0 | RETW | RETL | RETS | RETD | RETC
+  | NOP | PAR | PARC | PARE | ARGW | ARGL | ARGS | ARGD | ARGC | ARGE | ARGV
   | W | L | S | D | B | H | Z
   | PLUS | EQ | COMMA | LPAREN | RPAREN | LBRACE | RBRACE | ENV | DOTS
   | TYP of Atom.atom
@@ -68,20 +76,32 @@ structure T = QbeTypes
   | data_item of T.dataitem
   | const of T.const
   | typ_opt of T.ty option
-  | env_params of {params: (T.ty * Atom.atom) list,
-                   envp: Atom.atom option,
+  | env_params of {envp: Atom.atom option,
+                   params: (T.ty * Atom.atom) list,
                    variadic: bool}
   | params of {params: (T.ty * Atom.atom) list, variadic: bool}
   | param of T.ty * Atom.atom
-  | blocks of T.block list * T.ty option
-  | block of T.block * T.ty option
+  | blocks of {blocks: T.block list,
+               envp: Atom.atom option,
+               params: (T.ty * Atom.atom) list,
+               rty: T.ty option}
+  | block of {block: T.block,
+              envp: Atom.atom option,
+              params: (T.ty * Atom.atom) list,
+              rty: T.ty option}
+  | pars_phis_stmts of {envp: Atom.atom option,
+                        params: (T.ty * Atom.atom) list,
+                        phis: T.phi list,
+                        stmts: T.stmt list}
+  | par of par
   | phis_stmts of T.phi list * T.stmt list
   | phi of T.phi
   | phiargs of (Atom.atom * T.value) list
   | phiarg of Atom.atom * T.value
   | stmts of T.stmt list
   | stmt of T.stmt
-  | jump of T.jump option * T.ty option
+  | jump_rty of T.jump option * T.ty option
+  | jump of T.jump option
   | value of T.value
   | retty of T.ty
   | tmp_opt of (Atom.atom * T.ty) option
@@ -90,6 +110,8 @@ structure T = QbeTypes
                  vararg: int option}
   | args of {args: (T.ty * T.value) list, vararg: int option, i: int}
   | arg of (T.ty * T.value) option
+  | args_call of T.call * int
+  | arg' of arg'
   | ins1 of T.value -> T.instr
   | ins2 of T.value * T.value -> T.instr
   | store of T.value * T.value -> T.stmt
@@ -110,13 +132,18 @@ def : TYPE TYP EQ LBRACE tylist RBRACE          (T.Type{name=TYP,align=NONE,item
                  align = align_opt,
                  fields = data_fields})
     | linkage FUNCTION typ_opt GLO LPAREN env_params RPAREN LBRACE blocks RBRACE
-        (T.Function {name = GLO,
-                     linkage = linkage,
-                     params = #params env_params,
-                     envp = #envp env_params,
-                     variadic = #variadic env_params,
-                     result = if isSome(#2 blocks) then #2 blocks else typ_opt,
-                     blocks = #1 blocks})
+(
+  let val {envp, params, variadic} = env_params
+      val {blocks, envp=envp', params=params', rty} = blocks
+   in T.Function {name = GLO,
+                  linkage = linkage,
+                  envp = if isSome envp then envp else envp',
+                  params = if null params then params' else params,
+                  variadic = variadic,
+                  result = if isSome typ_opt then typ_opt else rty,
+                  blocks = blocks}
+  end
+)
 
 tylist :                                  ([])
        | ty_num                           ([ty_num])
@@ -168,14 +195,14 @@ const : INT                               (T.Int INT)
 typ_opt :                                 (NONE)
         | typ                             (SOME typ)
 
-env_params : params                       ({params = #params params,
-                                            envp = NONE,
+env_params : params                       ({envp = NONE,
+                                            params = #params params,
                                             variadic = #variadic params})
-           | ENV TMP                      ({params = [],
-                                            envp = SOME TMP,
+           | ENV TMP                      ({envp = SOME TMP,
+                                            params = [],
                                             variadic = false})
-           | ENV TMP COMMA params         ({params = #params params,
-                                            envp = SOME TMP,
+           | ENV TMP COMMA params         ({envp = SOME TMP,
+                                            params = #params params,
                                             variadic = #variadic params})
 
 params :                                  ({params=[], variadic=false})
@@ -187,13 +214,44 @@ params :                                  ({params=[], variadic=false})
 
 param : typ TMP                           ((typ, TMP))
 
-blocks : block                            (([#1 block], #2 block))
-       | block blocks                     ((#1 block::(#1 blocks), #2 blocks))
+blocks : block
+           (let val {block, envp, params, rty} = block
+             in {blocks=[block], envp=envp, params=params, rty=rty}
+            end)
+       | block blocks
+           (let val {block, envp, params, rty} = block
+                val {blocks, ...} = blocks
+             in {blocks=block::blocks, envp=envp, params=params, rty=rty}
+            end)
 
-block : LBL phis_stmts jump               (({label = LBL,
-                                             phis = #1 phis_stmts,
-                                             stmts = #2 phis_stmts,
-                                             jump = #1 jump}, #2 jump))
+block : LBL pars_phis_stmts jump_rty
+(
+  let val {envp, params, phis, stmts} = pars_phis_stmts
+   in {block = {label=LBL, phis=phis, stmts=stmts, jump= #1 jump_rty},
+       envp = envp,
+       params = params,
+       rty = #2 jump_rty}
+  end
+)
+
+pars_phis_stmts : par pars_phis_stmts
+(
+  let val {envp, params, phis, stmts} = pars_phis_stmts
+   in case par
+        of Par p => {envp=envp, params=p::params, phis=phis, stmts=stmts}
+         | Pare tmp => {envp=SOME tmp, params=params, phis=phis, stmts=stmts}
+         | Parc(agg, tmp) => {envp=envp, params=(T.Agg agg, tmp)::params,
+                              phis=phis, stmts=stmts}
+  end
+)
+                | phis_stmts              ({envp = NONE,
+                                            params = [],
+                                            phis = #1 phis_stmts,
+                                            stmts = #2 phis_stmts})
+
+par : TMP EQ typ PAR                      (Par(typ, TMP))
+    | TMP EQ L PARE                       (Pare TMP)
+    | TMP EQ L PARC TYP                   (Parc(TYP, TMP))
 
 phis_stmts : phi phis_stmts               (phi::(#1 phis_stmts), #2 phis_stmts)
            | stmts                        ([], stmts)
@@ -214,21 +272,36 @@ stmt : TMP EQ typ ins1 value              (T.Assign(TMP, typ, ins1 value))
      | store value COMMA value            (store(value1, value2))
      | tmp_opt CALL GLO LPAREN env_args RPAREN
 (
-  T.Call {result = tmp_opt,
-          name = GLO,
-          envp = #envp env_args,
-          args = #args env_args,
-          vararg = #vararg env_args}
+  let val {envp, args, vararg} = env_args
+   in T.Call {result = tmp_opt,
+              name = GLO,
+              envp = envp,
+              args = args,
+              vararg = Option.map (fn i => length args - i) vararg}
+  end
+)
+     | args_call
+(
+  let val ({result, name, envp, args, vararg}, _) = args_call
+   in T.Call {result = result,
+              name = name,
+              envp = envp,
+              args = args,
+              vararg = Option.map (fn i => length args - i) vararg}
+  end
 )
      | VASTART value                      (T.Vastart value)
 
-jump :                                    ((NONE, NONE))
-     | JMP LBL                            ((SOME(T.Jmp LBL), NONE))
-     | JNZ value COMMA LBL COMMA LBL      ((SOME(T.Jnz(value, LBL1, LBL2)), NONE))
-     | RET                                ((SOME(T.Ret NONE), NONE))
-     | RET0                               ((SOME(T.Ret NONE), NONE))
-     | RET value                          ((SOME(T.Ret(SOME value)), NONE))
-     | retty value                        ((SOME(T.Ret(SOME value)), SOME retty))
+jump_rty : jump                           ((jump, NONE))
+         | retty value                    ((SOME(T.Ret(SOME value)), SOME retty))
+         | RETC value COMMA TYP           ((SOME(T.Ret(SOME value)), SOME(T.Agg TYP)))
+
+jump :                                    (NONE)
+     | JMP LBL                            (SOME(T.Jmp LBL))
+     | JNZ value COMMA LBL COMMA LBL      (SOME(T.Jnz(value, LBL1, LBL2)))
+     | RET                                (SOME(T.Ret NONE))
+     | RET0                               (SOME(T.Ret NONE))
+     | RET value                          (SOME(T.Ret(SOME value)))
 
 value : TMP                               (T.Tmp TMP)
       | GLO                               (T.Glo GLO)
@@ -242,26 +315,22 @@ retty : RETW                              (T.W)
 tmp_opt :                                 (NONE)
         | TMP EQ typ                      (SOME(TMP, typ))
 
-env_args : args
-(
-  {envp = NONE,
-   args = #args args,
-   vararg = Option.map (fn i => length(#args args) - i) (#vararg args)}
-)
-         | ENV value                  ({envp=SOME value, args=[], vararg=NONE})
-         | ENV value COMMA args
-(
-  {envp = SOME value,
-   args = #args args,
-   vararg = Option.map (fn i => length(#args args) - i) (#vararg args)}
-)
+env_args : args                           ({envp = NONE,
+                                            args = #args args,
+                                            vararg = #vararg args})
+         | ENV value                      ({envp = SOME value,
+                                            args = [],
+                                            vararg = NONE})
+         | ENV value COMMA args           ({envp = SOME value,
+                                            args = #args args,
+                                            vararg = #vararg args})
 
 args :                                    ({args=[], vararg=NONE, i= ~1})
      | arg
 (
-   case arg
-     of NONE => {args=[], vararg=SOME 0, i=0}
-      | SOME a => {args=[a], vararg=NONE, i=0}
+  case arg
+    of NONE => {args=[], vararg=SOME 0, i=0}
+     | SOME a => {args=[a], vararg=NONE, i=0}
 )
      | arg COMMA args
 (
@@ -275,6 +344,32 @@ args :                                    ({args=[], vararg=NONE, i= ~1})
 
 arg : typ value                           (SOME(typ, value))
     | DOTS                                (NONE) (* variadic marker *)
+
+args_call : arg' args_call
+(
+  let val ({result, name, envp, args, vararg}, i) = args_call
+      fun call (e, a, v) = {result=result, name=name, envp=e, args=a, vararg=v}
+      val i = i + 1
+  in
+    case arg'
+      of Arg a => (call(envp, a::args, vararg), i)
+       | Arge v => (call(SOME v, args, vararg), i)
+       | Argv => (call(envp, args, SOME i), i)
+  end
+)
+      | tmp_opt CALL GLO                  (({result = tmp_opt,
+                                             name = GLO,
+                                             envp = NONE,
+                                             args = [],
+                                             vararg = NONE}, ~1))
+
+arg' : ARGW value                         (Arg(T.W, value))
+     | ARGL value                         (Arg(T.L, value))
+     | ARGS value                         (Arg(T.S, value))
+     | ARGD value                         (Arg(T.D, value))
+     | ARGC TYP COMMA value               (Arg(T.Agg TYP, value))
+     | ARGE value                         (Arge value)
+     | ARGV                               (Argv)
 
 ins1 : NEG                                (T.Neg)
      | LOADD                              (T.Loadd)

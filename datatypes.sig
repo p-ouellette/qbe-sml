@@ -156,8 +156,8 @@ type block = {label: Atom.atom,
 
 type func = {name: Atom.atom,
              linkage: linkage,
-             params: (ty * Atom.atom) list,
              envp: Atom.atom option,
+             params: (ty * Atom.atom) list,
              variadic: bool,
              result: ty option,
              blocks: block list}
