@@ -125,6 +125,7 @@ structure KW = KeywordFn(struct
      ("jmp", T.JMP),
      ("jnz", T.JNZ),
      ("ret", T.RET),
+     ("ret0", T.RET),
      ("retw", T.RETW),
      ("retl", T.RETL),
      ("rets", T.RETS),
