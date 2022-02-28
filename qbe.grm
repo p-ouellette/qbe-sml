@@ -219,9 +219,10 @@ blocks : block
              in {blocks=[block], envp=envp, params=params, rty=rty}
             end)
        | block blocks
-           (let val {block, envp, params, rty} = block
-                val {blocks, ...} = blocks
-             in {blocks=block::blocks, envp=envp, params=params, rty=rty}
+           (let val {block, envp, params, rty=rty'} = block
+                val {blocks, rty, ...} = blocks
+             in {blocks=block::blocks, envp=envp, params=params,
+                 rty = if isSome rty then rty else rty'}
             end)
 
 block : LBL pars_phis_stmts jump_rty
