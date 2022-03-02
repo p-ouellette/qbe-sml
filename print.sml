@@ -66,6 +66,7 @@ struct
      | T.Sar(a, b) => ("sar", [a, b])
      | T.Shr(a, b) => ("shr", [a, b])
      | T.Shl(a, b) => ("shl", [a, b])
+     | T.Load a => ("load", [a])
      | T.Loadd a => ("loadd", [a])
      | T.Loads a => ("loads", [a])
      | T.Loadl a => ("loadl", [a])

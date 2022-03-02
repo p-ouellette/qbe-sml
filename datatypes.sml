@@ -65,6 +65,7 @@ datatype instr = Add of value * value
                | Sar of value * value
                | Shr of value * value
                | Shl of value * value
+               | Load of value
                | Loadd of value
                | Loads of value
                | Loadl of value

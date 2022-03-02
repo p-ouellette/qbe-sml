@@ -16,8 +16,8 @@ datatype arg' = Arg of T.ty * T.value
   | ADD | SUB | DIV | MUL | NEG | UDIV | REM | UREM | OR | XOR | AND | SAR | SHR
   | SHL
   | STORED | STORES | STOREL | STOREW | STOREH | STOREB
-  | LOADD | LOADS | LOADL | LOADW | LOADSW | LOADUW | LOADSH | LOADUH | LOADSB
-  | LOADUB
+  | LOAD | LOADD | LOADS | LOADL | LOADW | LOADSW | LOADUW | LOADSH | LOADUH
+  | LOADSB | LOADUB
   | ALLOC4 | ALLOC8 | ALLOC16
   | CEQD | CEQL | CEQS | CEQW | CGED | CGES | CGTD | CGTS | CLED | CLES | CLTD 
   | CLTS | CNED | CNEL | CNES | CNEW | COD  | COS  | CSGEL | CSGEW | CSGTL
@@ -373,6 +373,7 @@ arg' : ARGW value                         (Arg(T.W, value))
      | ARGV                               (Argv)
 
 ins1 : NEG                                (T.Neg)
+     | LOAD                               (T.Load)
      | LOADD                              (T.Loadd)
      | LOADS                              (T.Loads)
      | LOADL                              (T.Loadl)

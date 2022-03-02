@@ -51,6 +51,7 @@ structure KW = KeywordFn(struct
      ("storew", T.STOREW),
      ("storeh", T.STOREH),
      ("storeb", T.STOREB),
+     ("load", T.LOAD),
      ("loadd", T.LOADD),
      ("loads", T.LOADS),
      ("loadl", T.LOADL),
