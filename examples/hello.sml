@@ -48,10 +48,10 @@ val fmt =
           fields = [T.DataTy(T.B, [T.DataStr "One and one make %d!\\n"]),
                     T.DataTy(T.B, [T.DataCon(T.Int 0)])]}
 
-val m = QbeGen.newModule()
-val _ = QbeGen.addDef(m, add)
-val _ = QbeGen.addDef(m, main)
-val _ = QbeGen.addDef(m, fmt)
+val m = QbeModule.module()
+val _ = QbeModule.addDef(m, add)
+val _ = QbeModule.addDef(m, main)
+val _ = QbeModule.addDef(m, fmt)
 val _ = QbePrint.printModule(TextIO.stdOut, m)
 
 val strm = TextIO.openIn "hello.ssa"

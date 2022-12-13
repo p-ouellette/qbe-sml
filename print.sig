@@ -1,6 +1,6 @@
 signature QBE_PRINT =
   sig
-    val printModule : TextIO.outstream * QbeGen.module -> unit
+    val printModule : TextIO.outstream * QbeModule.module -> unit
 
     val printDefs : TextIO.outstream * QbeTypes.def list -> unit
 

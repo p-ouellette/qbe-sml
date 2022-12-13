@@ -1,7 +1,7 @@
 SML_SRC = datatypes.sig \
 	  datatypes.sml \
-	  gen.sig \
-	  gen.sml \
+	  module.sig \
+	  module.sml \
 	  print.sig \
 	  print.sml \
 	  interface.sml \

@@ -1,8 +1,8 @@
-signature QBE_GEN =
+signature QBE_MODULE =
   sig
     type module
 
-    val newModule : unit -> module
+    val module : unit -> module
 
     val defs : module -> QbeTypes.def list
 

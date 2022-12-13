@@ -2,7 +2,7 @@ structure QbePrint : QBE_PRINT =
 struct
 
   structure T = QbeTypes
-  structure G = QbeGen
+  structure M = QbeModule
 
   fun say out s = TextIO.output(out, s)
 
@@ -255,6 +255,6 @@ struct
 
   fun printDefs (out, defs) = app (fn d => printDef(out, d)) defs
 
-  fun printModule (out, m) = printDefs(out, G.defs m)
+  fun printModule (out, m) = printDefs(out, M.defs m)
 
 end

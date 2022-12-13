@@ -1,12 +1,12 @@
 Library
   
   signature QBE_TYPES
-  signature QBE_GEN
+  signature QBE_MODULE
   signature QBE_PARSE
   signature QBE_PRINT
 
   structure QbeTypes
-  structure QbeGen
+  structure QbeModule
   structure QbeParse
   structure QbePrint
   structure Real32
@@ -19,8 +19,8 @@ is
 
   datatypes.sig
   datatypes.sml
-  gen.sig
-  gen.sml
+  module.sig
+  module.sml
   interface.sml
   parse.sig
   parse.sml

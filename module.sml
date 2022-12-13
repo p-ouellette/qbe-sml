@@ -1,11 +1,11 @@
-structure QbeGen :> QBE_GEN =
+structure QbeModule :> QBE_MODULE =
 struct
 
   structure T = QbeTypes
 
   type module = T.def list ref
 
-  fun newModule () = ref []
+  fun module () = ref []
 
   fun defs m = rev(!m)
 

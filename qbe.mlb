@@ -6,8 +6,8 @@ local
 
   datatypes.sig
   datatypes.sml
-  gen.sig
-  gen.sml
+  module.sig
+  module.sml
   print.sig
   print.sml
   interface.sml
@@ -20,12 +20,12 @@ local
 in
 
   signature QBE_TYPES
-  signature QBE_GEN
+  signature QBE_MODULE
   signature QBE_PARSE
   signature QBE_PRINT
 
   structure QbeTypes
-  structure QbeGen
+  structure QbeModule
   structure QbeParse
   structure QbePrint
 
