@@ -1,14 +1,12 @@
 structure QbeModule :> QBE_MODULE =
-struct
+  struct
+    structure T = QbeTypes
 
-  structure T = QbeTypes
+    type module = T.def list ref
 
-  type module = T.def list ref
+    fun module () = ref []
 
-  fun module () = ref []
+    fun defs m = rev (! m)
 
-  fun defs m = rev(!m)
-
-  fun addDef (m, def) = m := def :: !m
-
-end
+    fun addDef (m, def) = m := def :: ! m
+  end
